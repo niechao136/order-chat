@@ -1,54 +1,37 @@
-"""LangGraph single-node graph template.
+from langchain_core.messages import SystemMessage
+from langgraph.graph import StateGraph, START, END
 
-Returns a predefined response. Replace logic and configuration as needed.
-"""
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Any, Dict
-
-from langgraph.graph import StateGraph
-from langgraph.runtime import Runtime
-from typing_extensions import TypedDict
+from .llm import base, intent_llm
+from .prompt import CHAT_PROMPT, INTENT_PROMPT
+from .types import AgentState
 
 
-class Context(TypedDict):
-    """Context parameters for the agent.
-
-    Set these when creating assistants OR when invoking the graph.
-    See: https://langchain-ai.github.io/langgraph/cloud/how-tos/configuration_cloud/
-    """
-
-    my_configurable_param: str
+async def intent_node(state: AgentState):
+    sys_msg = SystemMessage(content=INTENT_PROMPT)
+    prompt = [sys_msg] + state["messages"]
+    response = await intent_llm.ainvoke(prompt)
+    return { "intent": response.intent }
 
 
-@dataclass
-class State:
-    """Input state for the agent.
-
-    Defines the initial structure of incoming data.
-    See: https://langchain-ai.github.io/langgraph/concepts/low_level/#state
-    """
-
-    changeme: str = "example"
+async def chat_node(state: AgentState):
+    sys_msg = SystemMessage(content=CHAT_PROMPT)
+    prompt = [sys_msg] + state["messages"]
+    response = await base.ainvoke(prompt)
+    return {"messages": [response]}
 
 
-async def call_model(state: State, runtime: Runtime[Context]) -> Dict[str, Any]:
-    """Process input and returns output.
-
-    Can use runtime context to alter behavior.
-    """
-    return {
-        "changeme": "output from call_model. "
-        f"Configured with {(runtime.context or {}).get('my_configurable_param')}"
-    }
+def route_tools(state: AgentState):
+    intent = state.get("intent")
+    if intent == "chat":
+        return "chat"
+    else:
+        return END
 
 
-# Define the graph
-graph = (
-    StateGraph(State, context_schema=Context)
-    .add_node(call_model)
-    .add_edge("__start__", "call_model")
-    .compile(name="New Graph")
-)
+graph_builder = StateGraph(AgentState)
+graph_builder.add_node("intent", intent_node)
+graph_builder.add_node("chat", chat_node)
+graph_builder.add_edge(START, "intent")
+graph_builder.add_conditional_edges("intent", route_tools, {"chat": "chat", END: END})
+graph_builder.add_edge("chat", END)
+graph = graph_builder.compile()
