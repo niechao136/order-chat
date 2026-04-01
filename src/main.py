@@ -1,19 +1,21 @@
+import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 
-from .api.auth import auth_router
-from .api.admin import admin_router
-from .api.chat import chat_router
-from .database.postgre import init_pool, close_pool
-from .dataset.qdrant import init_qdrant, close_qdrant
+from src.api.auth import auth_router
+from src.api.admin import admin_router
+from src.api.chat import chat_router
+from src.database.postgre import init_pool, close_pool, init_db
+from src.dataset.qdrant import init_qdrant, close_qdrant
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
 
     await init_pool()
+    await init_db()
     await init_qdrant()
 
     yield
@@ -37,3 +39,7 @@ app.add_middleware(
 app.include_router(router=auth_router)
 app.include_router(router=admin_router)
 app.include_router(router=chat_router)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=10085)
