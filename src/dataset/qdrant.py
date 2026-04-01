@@ -8,7 +8,7 @@ load_dotenv()
 
 
 host = os.getenv("QDRANT_HOST", "localhost")
-port = os.getenv("QDRANT_PORT", 6333)
+port = int(os.getenv("QDRANT_PORT", 6333))
 grpc = port == 6334
 COLLECTION_NAME = os.getenv("QDRANT_NAME", "menu")
 
@@ -21,14 +21,13 @@ async def init_qdrant():
         host=host,
         port=port,
         prefer_grpc=grpc,
-        # 设置重试机制，防止偶发性网络抖动
+        check_compatibility=False,
         grpc_options={"grpc.enable_retries": 1}
     )
 
 
 async def close_qdrant():
     await _client.close()
-
 
 
 def get_qdrant_client() -> AsyncQdrantClient:

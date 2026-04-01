@@ -29,6 +29,11 @@ class PageResult(BaseModel, Generic[T]):
     size: int
 
 
+class NoPageResult(BaseModel, Generic[T]):
+    total: int = Field(..., description="总记录数")
+    data: List[T] = Field(..., description="当前页数据列表")
+
+
 class DataResult(BaseModel, Generic[T]):
     data: Optional[T] = Field(None, description="某项数据具体信息")
     status: Literal[1, 0] = Field(0, description="状态码")

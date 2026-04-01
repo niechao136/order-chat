@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
-from ..database.postgre import get_db_pool
-from ..types.auth import UserRegister, UserLogin, UserRole, TokenDict, TokenResponse, TokenSuccessResponse, TokenErrorResponse
-from ..utils.jwt import create_access_token
-from ..utils.pwd import pwd_context
+from src.database.postgre import get_db_pool
+from src.schemas.auth import UserRegister, UserLogin, UserRole, TokenDict, TokenResponse, TokenSuccessResponse, TokenErrorResponse
+from src.utils.jwt import create_access_token
+from src.utils.pwd import pwd_context
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 

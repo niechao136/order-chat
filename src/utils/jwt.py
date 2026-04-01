@@ -7,7 +7,7 @@ from typing import Annotated, List
 from fastapi import Header, HTTPException, status, Depends
 from jose import jwt, JWTError
 
-from ..types.auth import TokenDict, UserRole
+from src.schemas.auth import TokenDict, UserRole
 
 
 load_dotenv()

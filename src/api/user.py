@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends
 
-from ..database.postgre import get_db_pool
-from ..types.auth import TokenDict
-from ..types.page import PageResult, PageParams, DataResult
-from ..types.user import UserInfo, UserAdd, UserUpdate, UserPassword
-from ..utils.jwt import get_current_admin, get_current_user
-from ..utils.api import hand_id
-from ..utils.pwd import pwd_context
+from src.database.postgre import get_db_pool
+from src.schemas.auth import TokenDict
+from src.schemas.page import PageResult, PageParams, DataResult
+from src.schemas.user import UserInfo, UserAdd, UserUpdate, UserPassword
+from src.utils.jwt import get_current_admin, get_current_user
+from src.utils.api import hand_id
+from src.utils.pwd import pwd_context
 
 
 user_router = APIRouter(prefix="/user", tags=["User"])

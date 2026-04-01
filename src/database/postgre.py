@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 import asyncpg
 
-from ..utils.pwd import pwd_context
+from src.utils.pwd import pwd_context
 
 
 load_dotenv()
