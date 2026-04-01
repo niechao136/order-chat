@@ -9,10 +9,10 @@ from ..dataset.embedding import get_embedding_async
 from ..dataset.qdrant import get_qdrant_client, COLLECTION_NAME
 
 
-admin_router = APIRouter(prefix="/admin", tags=["Qdrant Management"])
+dataset_router = APIRouter(prefix="/dataset", tags=["Dataset"])
 
 
-@admin_router.post("/init")
+@dataset_router.post("/init")
 async def init_qdrant(client: AsyncQdrantClient = Depends(get_qdrant_client)):
     try:
         await client.collection_exists(collection_name=COLLECTION_NAME)
@@ -21,7 +21,7 @@ async def init_qdrant(client: AsyncQdrantClient = Depends(get_qdrant_client)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@admin_router.post("/upsert")
+@dataset_router.post("/upsert")
 async def upsert_item(text: str, menu_id: str = None, client: AsyncQdrantClient = Depends(get_qdrant_client)):
     vector = await get_embedding_async(text=text)
     key = menu_id or hashlib.md5(text.encode()).hexdigest()
@@ -33,7 +33,7 @@ async def upsert_item(text: str, menu_id: str = None, client: AsyncQdrantClient 
     return {"status": 200, "data": uu_id}
 
 
-@admin_router.post("/search")
+@dataset_router.post("/search")
 async def search_item(text: str, top_k = 10, client: AsyncQdrantClient = Depends(get_qdrant_client)):
     vector = await get_embedding_async(text=text)
 
