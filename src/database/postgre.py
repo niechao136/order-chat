@@ -2,6 +2,9 @@ import os
 from dotenv import load_dotenv
 
 import asyncpg
+from psycopg_pool import AsyncConnectionPool
+from psycopg import AsyncConnection
+from psycopg.rows import dict_row
 
 from src.utils.pwd import pwd_context
 
@@ -91,3 +94,26 @@ async def init_db():
             ON CONFLICT (username) DO NOTHING;
             """, admin_usr, hash_pwd)
             print(f"init_db 加入初始管理员: {pool}")
+
+
+_conn: AsyncConnectionPool[AsyncConnection[dict]] | None = None
+
+async def init_conn():
+    global _conn
+    print(f"init_conn: {_conn}")
+    _conn = AsyncConnectionPool(
+        conninfo=f"postgresql://{user}:{password}@{host}:{port}/{database}",
+        max_size=20,
+        open=False,
+        kwargs={
+            "row_factory": dict_row,
+            "autocommit": True
+        }
+    )
+    await _conn.open()
+    print(f"init_conn: {_conn}")
+
+async def get_db_conn() -> AsyncConnectionPool[AsyncConnection[dict]]:
+    if not _conn:
+        await init_conn()
+    return _conn

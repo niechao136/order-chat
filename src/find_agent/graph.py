@@ -9,6 +9,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 
+from src.database.checkpointer import get_checkpointer
 from src.schemas.find_agent import AgentState
 
 from .llm import base
@@ -52,4 +53,14 @@ graph_builder.add_node("tools", tool_node)
 graph_builder.add_edge(START, "agent")
 graph_builder.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
 graph_builder.add_edge("tools", "agent")
-graph = graph_builder.compile()
+
+
+async def create_find_graph():
+    checkpointer = await get_checkpointer()
+
+    _graph = graph_builder.compile(checkpointer=checkpointer)
+
+    return _graph
+
+
+graph = create_find_graph

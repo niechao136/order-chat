@@ -67,3 +67,19 @@ async def get_current_admin(current_user: Annotated[TokenDict, Depends(get_curre
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Permission denied. Required roles: {ALLOW_ROLE}")
     return current_user
+
+
+async def get_chat_user(authorization: Annotated[str, Header()] = None) -> TokenDict | None:
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+
+    token = authorization[7:]
+    payload = verify_access_token(token)
+
+    if not payload:
+        return None
+
+    try:
+        return TokenDict(**payload)
+    except ValidationError:
+        return None

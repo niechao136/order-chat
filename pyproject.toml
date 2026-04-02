@@ -18,6 +18,7 @@ dependencies = [
     "langgraph>=1.0.0",
     "langgraph-checkpoint-postgres>=3.0.5",
     "passlib[bcrypt]>=1.7.4",
+    "psycopg[binary]",
     "python-dotenv>=1.0.1",
     "python-jose>=3.5.0",
     "python-multipart>=0.0.22",
@@ -33,10 +34,10 @@ requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["langgraph.templates.agent", "agent"]
+packages = ["find-agent", "order-agent"]
 [tool.setuptools.package-dir]
-"langgraph.templates.agent" = "src/agent"
-"agent" = "src/agent"
+"find-agent" = "src/find_agent"
+"order-agent" = "src/order_agent"
 
 
 [tool.setuptools.package-data]
