@@ -23,11 +23,13 @@ _pool: asyncpg.Pool | None = None
 
 async def init_pool():
     global _pool
+    print(f"init_pool: {_pool}")
     _pool = await asyncpg.create_pool(
         dsn=f"postgresql://{user}:{password}@{host}:{port}/{database}",
-        min_size=5,  # 最小连接数
+        min_size=1,  # 最小连接数
         max_size=20  # 最大连接数
     )
+    print(f"init_pool: {_pool}")
 
 
 async def close_pool():
@@ -40,8 +42,10 @@ async def get_db_pool() -> asyncpg.Pool:
 
 async def init_db():
     pool = await get_db_pool()
+    print(f"init_db: {pool}")
     async with pool.acquire() as conn:
         async with conn.transaction():
+            print(f"init_db 开始: {pool}")
             # 创建函数
             await conn.execute("""
             CREATE OR REPLACE FUNCTION update_modified_column()
@@ -52,6 +56,7 @@ async def init_db():
             END;
             $$ language 'plpgsql';
             """)
+            print(f"init_db 创建函数: {pool}")
             # 创建用户表
             await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -64,6 +69,7 @@ async def init_db():
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
             """)
+            print(f"init_db 创建用户表: {pool}")
             # 绑定触发器
             await conn.execute("""
             DO $$
@@ -76,6 +82,7 @@ async def init_db():
                 END IF;
             END $$;
             """)
+            print(f"init_db 绑定触发器: {pool}")
             # 加入初始管理员
             hash_pwd = pwd_context.hash(admin_pwd)
             await conn.execute("""
@@ -83,3 +90,4 @@ async def init_db():
             VALUES ($1, $2, 'admin')
             ON CONFLICT (username) DO NOTHING;
             """, admin_usr, hash_pwd)
+            print(f"init_db 加入初始管理员: {pool}")

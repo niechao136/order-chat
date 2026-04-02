@@ -33,7 +33,7 @@ async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends
 
     add = await client.create_collection(
         collection_name=req.name,
-        vectors_config=models.VectorParams(size=1536, distance=models.Distance.COSINE))
+        vectors_config=models.VectorParams(size=3072, distance=models.Distance.COSINE))
     if not add:
         return DataResult(status=0, msg="Dataset add failed", data=None)
 
@@ -181,7 +181,7 @@ async def add_item(name: str, req: ItemSearch, client: AsyncQdrantClient = Depen
 
     rows = await client.query_points(
         collection_name=name,
-        query_vector=vector,
+        query=vector,
         limit=req.top_k,
         with_payload=True
     )

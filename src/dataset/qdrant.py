@@ -17,13 +17,16 @@ _client: AsyncQdrantClient | None = None
 
 async def init_qdrant():
     global _client
+    print(f"init_qdrant: {_client}")
     _client = AsyncQdrantClient(
         host=host,
         port=port,
         prefer_grpc=grpc,
         check_compatibility=False,
-        grpc_options={"grpc.enable_retries": 1}
+        grpc_options={"grpc.enable_retries": 1},
+        timeout=60
     )
+    print(f"init_qdrant: {_client}")
 
 
 async def close_qdrant():
