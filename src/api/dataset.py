@@ -9,7 +9,7 @@ from qdrant_client.http import models
 from qdrant_client.models import CollectionDescription, CollectionInfo, ScoredPoint, Record, PointStruct
 
 from src.dataset.embedding import get_embedding_async, get_embeddings_async_batch
-from src.dataset.qdrant import get_qdrant_client
+from src.dataset.qdrant import get_qdrant_client_async
 from src.schemas.dataset import CollectionAdd, ItemSearch, ItemAdd, ItemUpdate, ItemDelete
 from src.schemas.page import NoPageResult, DataResult, PageResult, PageParams
 from src.utils.jwt import get_current_admin
@@ -19,14 +19,14 @@ dataset_router = APIRouter(prefix="/dataset", tags=["Dataset"], dependencies=[De
 
 
 @dataset_router.get("/", response_model=NoPageResult[CollectionDescription])
-async def collection_list(client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def collection_list(client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     rows = await client.get_collections()
     data = rows.collections
     return NoPageResult(total=len(data), data=data)
 
 
 @dataset_router.post("/", response_model=DataResult[CollectionInfo])
-async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(req.name)
     if exist:
         return DataResult(status=0, msg="Dataset already exists", data=None)
@@ -42,7 +42,7 @@ async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends
 
 
 @dataset_router.get("/{name}", response_model=DataResult[CollectionInfo])
-async def collection_info(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def collection_info(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(name)
     if not exist:
         return DataResult(status=0, msg="Dataset not exists", data=None)
@@ -52,7 +52,7 @@ async def collection_info(name: str, client: AsyncQdrantClient = Depends(get_qdr
 
 
 @dataset_router.delete("/{name}", response_model=DataResult[str])
-async def delete_collection(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def delete_collection(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(name)
     if not exist:
         return DataResult(status=0, msg="Dataset not exists", data=None)
@@ -65,7 +65,7 @@ async def delete_collection(name: str, client: AsyncQdrantClient = Depends(get_q
 
 
 @dataset_router.get("/{name}/item", response_model=PageResult[Record])
-async def item_list(name: str, params: PageParams = Depends(), client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def item_list(name: str, params: PageParams = Depends(), client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     records, next_page_offset = await client.scroll(
         collection_name=name,
         limit=params.size,
@@ -83,7 +83,7 @@ async def item_list(name: str, params: PageParams = Depends(), client: AsyncQdra
 
 
 @dataset_router.post("/{name}/item", response_model=DataResult[str])
-async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     vector = await get_embedding_async(text=req.text)
     key = hashlib.md5(req.text.encode()).hexdigest()
     uu_id = uuid.UUID(key)
@@ -94,7 +94,7 @@ async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(
 
 
 @dataset_router.post("/{name}/item/upload", response_model=DataResult[List[str]])
-async def upload_item(name: str, file: UploadFile = File(...), client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def upload_item(name: str, file: UploadFile = File(...), client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     try:
         content = await file.read()
         full_text = content.decode("utf-8")
@@ -134,7 +134,7 @@ async def upload_item(name: str, file: UploadFile = File(...), client: AsyncQdra
 
 
 @dataset_router.put("/{name}/item/{item_id}", response_model=DataResult[str])
-async def update_item(name: str, item_id: str, req: ItemUpdate, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def update_item(name: str, item_id: str, req: ItemUpdate, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     vector = await get_embedding_async(text=req.text)
     key = hashlib.md5(req.text.encode()).hexdigest()
     uu_id = uuid.UUID(key)
@@ -147,7 +147,7 @@ async def update_item(name: str, item_id: str, req: ItemUpdate, client: AsyncQdr
 
 
 @dataset_router.get("/{name}/item/{item_id}", response_model=DataResult[Record])
-async def get_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def get_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     res = await client.retrieve(collection_name=name, ids=[item_id])
     if not res:
         return DataResult(status=0, msg="Item not found", data=None)
@@ -155,19 +155,19 @@ async def get_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(
 
 
 @dataset_router.delete("/{name}/item/{item_id}", response_model=DataResult[str])
-async def delete_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def delete_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     await client.delete(collection_name=name, points_selector=[item_id], wait=True)
     return DataResult(status=1, msg=None, data=None)
 
 
 @dataset_router.delete("/{name}/item/delete", response_model=DataResult[str])
-async def batch_delete_item(name: str, req: ItemDelete, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def batch_delete_item(name: str, req: ItemDelete, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     await client.delete(collection_name=name, points_selector=req.ids, wait=True)
     return DataResult(status=1, msg=None, data=None)
 
 
 @dataset_router.delete("/{name}/clear", response_model=DataResult[str])
-async def clear_items(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def clear_items(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     await client.delete(
         collection_name=name,
         points_selector=models.Filter(must=[]) # 匹配所有
@@ -176,7 +176,7 @@ async def clear_items(name: str, client: AsyncQdrantClient = Depends(get_qdrant_
 
 
 @dataset_router.post("/{name}/search", response_model=NoPageResult[ScoredPoint])
-async def add_item(name: str, req: ItemSearch, client: AsyncQdrantClient = Depends(get_qdrant_client)):
+async def add_item(name: str, req: ItemSearch, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     vector = await get_embedding_async(text=req.text)
 
     rows = await client.query_points(

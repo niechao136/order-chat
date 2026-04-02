@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-from qdrant_client import AsyncQdrantClient
+from qdrant_client import AsyncQdrantClient, QdrantClient
 
 
 load_dotenv()
@@ -12,13 +12,38 @@ port = int(os.getenv("QDRANT_PORT", 6333))
 grpc = port == 6334
 COLLECTION_NAME = os.getenv("QDRANT_NAME", "menu")
 
-_client: AsyncQdrantClient | None = None
+_client_async: AsyncQdrantClient | None = None
 
 
-async def init_qdrant():
+async def init_qdrant_async():
+    global _client_async
+    print(f"init_qdrant: {_client_async}")
+    _client_async = AsyncQdrantClient(
+        host=host,
+        port=port,
+        prefer_grpc=grpc,
+        check_compatibility=False,
+        grpc_options={"grpc.enable_retries": 1},
+        timeout=60
+    )
+    print(f"init_qdrant: {_client_async}")
+
+
+async def close_qdrant_async():
+    await _client_async.close()
+
+
+def get_qdrant_client_async() -> AsyncQdrantClient:
+    return _client_async
+
+
+_client: QdrantClient | None = None
+
+
+def init_qdrant():
     global _client
     print(f"init_qdrant: {_client}")
-    _client = AsyncQdrantClient(
+    _client = QdrantClient(
         host=host,
         port=port,
         prefer_grpc=grpc,
@@ -29,9 +54,9 @@ async def init_qdrant():
     print(f"init_qdrant: {_client}")
 
 
-async def close_qdrant():
-    await _client.close()
+def close_qdrant():
+    _client.close()
 
 
-def get_qdrant_client() -> AsyncQdrantClient:
+def get_qdrant_client() -> QdrantClient:
     return _client

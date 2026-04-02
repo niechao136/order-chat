@@ -9,7 +9,7 @@ from src.api.chat import chat_router
 from src.api.dataset import dataset_router
 from src.api.user import user_router
 from src.database.postgre import init_pool, close_pool, init_db
-from src.dataset.qdrant import init_qdrant, close_qdrant
+from src.dataset.qdrant import init_qdrant_async, close_qdrant_async
 
 
 @asynccontextmanager
@@ -17,11 +17,11 @@ async def lifespan(_: FastAPI):
 
     await init_pool()
     await init_db()
-    await init_qdrant()
+    await init_qdrant_async()
 
     yield
 
-    await close_qdrant()
+    await close_qdrant_async()
     await close_pool()
 
 
