@@ -16,10 +16,17 @@ from src.utils.jwt import get_current_user
 chat_router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
+GRAPH_LIST = ["find", "order"]
+
 async def get_graph_by_name(graph: str):
     if graph == "find":
         return await create_find_graph()
     return None
+
+
+@chat_router.get("/", response_model=List[str])
+async def get_graph(_: TokenDict = Depends(get_current_user)):
+    return GRAPH_LIST
 
 
 @chat_router.get("/{graph}", response_model=PageResult[ThreadItem])
