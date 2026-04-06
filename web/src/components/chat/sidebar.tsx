@@ -1,30 +1,38 @@
 'use client';
 
-import Cookies from 'js-cookie';
-import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 
-import { useRouter } from 'next/navigation';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail
+} from '@/components/ui/sidebar';
+import { GraphSwitch } from '@/components/chat/graph-switch';
+import { ChatThread } from '@/types/chat';
+import { UserInfo } from '@/types/user';
 
-import { Sidebar } from '@/components/ui/sidebar';
+export function ChatSidebar({ graphs, owner, threads }: {
+  graphs: string[]
+  owner: UserInfo | null
+  threads: ChatThread[]
+}) {
+  const params = useParams();
+  const graph = params.graph as string;
 
-export function ChatSidebar({ graph }: { graph: string }) {
-   const router = useRouter();
-  const [graphs, setGraphs] = useState<string[]>([]);
-  const [threads, setThreads] = useState([]);
+  return (
+    <Sidebar>
+      <SidebarHeader>
+        <GraphSwitch graphs={graphs} active={graph}/>
+      </SidebarHeader>
+      <SidebarContent>
 
-  useEffect(() => {
-    const token = Cookies.get("token")
-    if (!token) {
-      router.push('/login')
-    }
-    const fetchGraph = async () => {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data: string[] = await res.json();
-      setGraphs(data);
-    }
-  }, [graph])
+      </SidebarContent>
+      <SidebarFooter>
 
-  return (<></>)
+      </SidebarFooter>
+      <SidebarRail/>
+    </Sidebar>
+  )
 }

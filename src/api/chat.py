@@ -9,7 +9,7 @@ from src.database.postgre import get_db_pool
 from src.find_agent.graph import create_find_graph
 from src.schemas.auth import TokenDict
 from src.schemas.chat import ThreadItem, ChatReq
-from src.schemas.page import PageResult, PageParams, NoPageResult
+from src.schemas.page import NoPageResult
 from src.utils.jwt import get_current_user
 
 
@@ -29,8 +29,8 @@ async def get_graph(_: TokenDict = Depends(get_current_user)):
     return GRAPH_LIST
 
 
-@chat_router.get("/{graph}", response_model=PageResult[ThreadItem])
-async def get_all_threads(graph: str, params: PageParams = Depends(), user: TokenDict = Depends(get_current_user)):
+@chat_router.get("/{graph}", response_model=NoPageResult[ThreadItem])
+async def get_all_threads(graph: str, user: TokenDict = Depends(get_current_user)):
     """
     查看某个 Graph 下所有的历史对话列表（从 Postgres 聚合 thread_id）。
     """
@@ -46,8 +46,7 @@ async def get_all_threads(graph: str, params: PageParams = Depends(), user: Toke
         WHERE checkpoint_ns = $1 AND thread_id LIKE $2
         GROUP BY thread_id
         ORDER BY last_update DESC
-        LIMIT $3 OFFSET $4
-        """, f"graph_{graph}", f"user_{user.id}_%", params.size, params.offset)
+        """, f"graph_{graph}", f"user_{user.id}_%")
         total = await conn.fetchval("""
         SELECT COUNT(*)
         FROM checkpoints
@@ -69,11 +68,9 @@ async def get_all_threads(graph: str, params: PageParams = Depends(), user: Toke
 
         res.append(ThreadItem(thread_id=thread_id, summary=first_msg, last_id=t["last_update"]))
 
-    return PageResult(
+    return NoPageResult(
         total=total,
-        data=res,
-        page=params.page,
-        size=params.size
+        data=res
     )
 
 

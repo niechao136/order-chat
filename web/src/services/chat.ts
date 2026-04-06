@@ -1,8 +1,86 @@
-import { apiRequest } from '@/services/api'
+import Cookies from "js-cookie";
+
+import { apiRequest } from '@/services/api';
+import { PageResult } from '@/types/api';
+import { ChatThread } from '@/types/chat';
 
 
 export async function getGraphList() {
   const res = await apiRequest('chat')
   const data = await res.json()
   return Array.isArray(data) ? data : []
+}
+
+
+export async function getThreadList(graph: string, abort: AbortController = new AbortController()) {
+  const res = await apiRequest(`chat/${graph}`, {
+    signal: abort.signal,
+  })
+  const data: PageResult<ChatThread> = await res.json()
+  return data
+}
+
+
+export async function sendMessage(
+  graph: string,
+  thread_id: string,
+  message: string,
+  onChunk: (content: string, node?: string) => void, // 收到碎片时的回调
+  onDone?: () => void // 结束时的回调
+) {
+
+  const token = Cookies.get('token');
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}chat/${graph}/${thread_id}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ message }),
+  });
+
+  if (!response.ok) throw new Error('网络请求失败');
+  if (!response.body) throw new Error('流数据为空');
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = ""; // 用于处理不完整的行
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    // 1. 解码当前块并加入缓冲区
+    buffer += decoder.decode(value, { stream: true });
+
+    // 2. 按 SSE 规范的双换行符分割消息
+    const parts = buffer.split("\n\n");
+
+    // 留下最后一个可能不完整的行在 buffer 中
+    buffer = parts.pop() || "";
+
+    for (const part of parts) {
+      const line = part.trim();
+      if (!line || !line.startsWith("data: ")) continue;
+
+      const data = line.replace("data: ", "");
+
+      // 3. 检查结束标记
+      if (data === "[DONE]") {
+        onDone?.();
+        return;
+      }
+
+      // 4. 解析 JSON 并回调
+      try {
+        const { content, node } = JSON.parse(data);
+        if (content) {
+          onChunk(content, node);
+        }
+      } catch (e) {
+        console.error("解析 SSE 数据失败", e);
+      }
+    }
+  }
 }

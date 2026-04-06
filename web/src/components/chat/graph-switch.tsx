@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react'
+import { ChevronsUpDown, VectorSquareIcon } from 'lucide-react'
 
 import {
   DropdownMenu,
@@ -8,12 +9,61 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuShortcut,
-  DropdownMenuSubTrigger
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { SidebarTrigger, SidebarMenu, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 
 
-export function GraphSwitch({ graph }: { graph: string }) {
+export function GraphSwitch({ graphs, active }: {
+  graphs: string[],
+  active: string
+}) {
   const { isMobile } = useSidebar()
-  const [] = useState(graph)
+  const [ activeGraph, setActiveGraph ] = useState<string>(active)
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <VectorSquareIcon className="size-4" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">{activeGraph}</span>
+              </div>
+              <ChevronsUpDown className="ml-auto" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+           <DropdownMenuContent
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            align="start"
+            side={isMobile ? "bottom" : "right"}
+            sideOffset={4}
+          >
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Graphs
+            </DropdownMenuLabel>
+            {graphs.map((graph, index) => (
+              <DropdownMenuItem
+                key={graph}
+                onClick={() => setActiveGraph(graph)}
+                className="gap-2 p-2"
+              >
+                <div className="flex size-6 items-center justify-center rounded-md border">
+                  <VectorSquareIcon className="size-3.5 shrink-0" />
+                </div>
+                {graph}
+                <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
 }

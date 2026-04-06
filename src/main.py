@@ -1,3 +1,9 @@
+import asyncio
+import sys
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -44,4 +50,4 @@ app.include_router(router=user_router)
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=10085)
+    uvicorn.run(app, host="0.0.0.0", port=10085, loop="asyncio")

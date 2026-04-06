@@ -1,16 +1,11 @@
 import * as React from 'react';
 
-import { ChatSidebar } from '@/components/chat/sidebar';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
+import { ChatBody } from '@/components/chat/body';
 
-export default function ChatLayout({ children, params }: {
+export default async function ChatLayout({ children }: {
   children: React.ReactNode;
-  params: { graph: string };
 }) {
   return (
-    <SidebarProvider>
-      <ChatSidebar graph={params.graph}/>
-      <SidebarInset>{children}</SidebarInset>
-    </SidebarProvider>
+    <ChatBody>{children}</ChatBody>
   )
 }
