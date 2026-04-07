@@ -1,5 +1,4 @@
-from typing import Optional, Literal, List, TypeVar, Generic
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class ThreadItem(BaseModel):
@@ -10,3 +9,8 @@ class ThreadItem(BaseModel):
 
 class ChatReq(BaseModel):
     message: str
+
+class ChatMessage(BaseModel):
+    id: str
+    content: str
+    role: str

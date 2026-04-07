@@ -1,7 +1,7 @@
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg.errors import UniqueViolation
 
-from .postgre import get_db_conn
+from .postgre import get_db_pool
 
 
 _cached_checkpointer: AsyncPostgresSaver | None = None
@@ -13,7 +13,7 @@ async def get_checkpointer():
     if _cached_checkpointer:
         return _cached_checkpointer
 
-    conn = await get_db_conn()
+    conn = await get_db_pool()
 
     checkpointer = AsyncPostgresSaver(conn)
 

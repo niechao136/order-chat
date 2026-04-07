@@ -1,7 +1,7 @@
 'use client';
 
 import { Send, Sparkles } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { v7 } from 'uuid';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -9,10 +9,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { MessageList } from '@/components/chat/message-list';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useGlobal } from '@/context/global-context';
-import { sendMessage } from '@/services/chat'
+import { useOwner, useStartChat } from '@/hooks/use-query';
 import { ChatMessage } from '@/types/chat';
-import { UserInfo } from '@/types/user'
 
 export default function GraphPage() {
 
@@ -20,53 +18,42 @@ export default function GraphPage() {
   const graph = params.graph as string;
   const router = useRouter();
 
-  const [ owner, setOwner ] = useState<UserInfo | null>(null);
+  const { data: owner } = useOwner();
+  const { mutate: startChat } = useStartChat(graph);
+
   const [input, setInput] = useState('');
   const [isSend, setIsSend] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  const { getOwner } = useGlobal()
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const owner = await getOwner()
-      setOwner(owner)
-    }
-
-    fetchData().then()
-  }, [getOwner])
-
   const handleStartChat = async () => {
-    if (!input.trim()) return;
-    const uuid = v7();
-    const new_id = `user_${owner?.id}_${uuid}`
-    setIsSend(true);
 
-    const userMsg: ChatMessage = { role: 'user', content: input, id: Date.now().toString() };
+    if (!input.trim()) return;
+
+    const thread_id = `user_${owner?.id}_${v7()}`;
+    const content = input;
+
+    setIsSend(true);
+    setInput('');
+
+    const userMsg: ChatMessage = { role: 'user', content, id: Date.now().toString() };
     setMessages([userMsg]);
 
     const aiMsgId = (Date.now() + 1).toString();
     setMessages(prev => [...prev, { role: 'assistant', content: '', id: aiMsgId }]);
 
-    try {
-      await sendMessage(
-        graph as string,
-        new_id,
-        input,
-        (chunk) => {
-          setMessages(prev => prev.map(msg =>
-            msg.id === aiMsgId
-              ? { ...msg, content: msg.content + chunk }
-              : msg
-          ));
-        },
-        () => {
-          // router.replace(`/${graph}/${new_id}`, { scroll: false });
-        }
-      );
-    } catch (err) {
-      console.error(err);
-    }
+    startChat({
+      thread_id,
+      content,
+      onChunk: (chunk: string) => {
+        setMessages(prev => prev.map(msg =>
+          msg.id === aiMsgId ? { ...msg, content: msg.content + chunk } : msg
+        ));
+      },
+      onDone: () => {
+        // 流结束后跳转，此时侧边栏已经有了（乐观更新注入的），不会有空档期
+        router.replace(`/${graph}/${thread_id}`, { scroll: false });
+      },
+    });
   };
 
   return (

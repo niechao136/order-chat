@@ -1,7 +1,7 @@
 import hashlib
 import uuid
 import re
-from typing import List
+from typing import List, Any, cast
 
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from qdrant_client import AsyncQdrantClient
@@ -181,7 +181,7 @@ async def add_item(name: str, req: ItemSearch, client: AsyncQdrantClient = Depen
 
     rows = await client.query_points(
         collection_name=name,
-        query=vector,
+        query=cast(Any, vector),
         limit=req.top_k,
         with_payload=True
     )

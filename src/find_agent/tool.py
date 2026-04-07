@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any, cast
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
@@ -40,7 +40,7 @@ async def search_product(query: str, top_k: int = 5, config: RunnableConfig = No
     print(f"DEBUG: [6] 开始请求 Qdrant query_points，collection_name={collection_name}")
     rows = client.query_points(
         collection_name=collection_name,
-        query=vector,
+        query=cast(Any, vector),
         limit=top_k,
         with_payload=True
     )

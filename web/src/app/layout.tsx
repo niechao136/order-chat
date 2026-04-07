@@ -6,7 +6,7 @@ import type { Metadata } from 'next';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
-import { GlobalProvider } from '@/context/global-context';
+import { QueryProvider } from '@/providers/query-provider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -23,10 +23,10 @@ export default function RootLayout({ children }: Readonly<{
       className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
     >
     <body className="min-h-full flex flex-col">
-      <GlobalProvider>
+      <QueryProvider>
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster/>
-      </GlobalProvider>
+      </QueryProvider>
     </body>
     </html>
   );

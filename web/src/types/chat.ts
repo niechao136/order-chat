@@ -5,9 +5,10 @@ export interface ChatThread {
   summary: string
 }
 
+export type MessageRole = 'user' | 'assistant';
+
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: MessageRole;
   content: string;
-  node?: string;
 }

@@ -1,4 +1,4 @@
-// src/middleware.ts
+// src/proxy.ts
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -8,6 +8,9 @@ export function proxy(request: NextRequest) {
 
   // 2. 获取当前访问的路径
   const { pathname } = request.nextUrl
+
+  const publicPaths = ['/login', '/register']
+  const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
 
   // 3. 定义逻辑：如果访问的是根路径 "/"
   if (pathname === '/') {
@@ -20,10 +23,11 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // 4. 定义逻辑：保护 /chat 和 /admin 路径
-  if (pathname.startsWith('/chat') || pathname.startsWith('/admin')) {
-    if (!token) {
-      // 没登录却想进后台，强制踢回登录页
+  // 4. 动态路由保护
+  if (!isPublicPath && !token) {
+    // 排除掉图片、字体等静态资源
+    const isStaticResource = pathname.includes('.') || pathname.startsWith('/_next')
+    if (!isStaticResource) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
   }
@@ -34,10 +38,13 @@ export function proxy(request: NextRequest) {
 // 匹配器：设置哪些路径需要经过此中间件（提升性能）
 export const config = {
   matcher: [
-    '/',
-    '/chat/:path*',
-    '/admin/:path*',
-    '/login',
-    '/register',
+    /*
+     * 匹配所有路径，除了：
+     * 1. /api (API 路由)
+     * 2. /_next/static (静态文件)
+     * 3. /_next/image (图片优化)
+     * 4. /favicon.ico (浏览器图标)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }

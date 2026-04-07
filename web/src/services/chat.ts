@@ -2,21 +2,26 @@ import Cookies from "js-cookie";
 
 import { apiRequest } from '@/services/api';
 import { PageResult } from '@/types/api';
-import { ChatThread } from '@/types/chat';
+import { ChatThread, ChatMessage } from '@/types/chat';
 
 
-export async function getGraphList() {
+export async function getGraphList()  {
   const res = await apiRequest('chat')
-  const data = await res.json()
-  return Array.isArray(data) ? data : []
+  const data: string[] = await res.json()
+  return data
 }
 
 
-export async function getThreadList(graph: string, abort: AbortController = new AbortController()) {
-  const res = await apiRequest(`chat/${graph}`, {
-    signal: abort.signal,
-  })
+export async function getThreadList(graph: string) {
+  const res = await apiRequest(`chat/${graph}`)
   const data: PageResult<ChatThread> = await res.json()
+  return data
+}
+
+
+export async function getChatHistory(graph: string, thread_id: string) {
+  const res = await apiRequest(`chat/${graph}/${thread_id}`)
+  const data: PageResult<ChatMessage> = await res.json()
   return data
 }
 

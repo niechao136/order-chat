@@ -50,4 +50,20 @@ app.include_router(router=user_router)
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=10085, loop="asyncio")
+    config = uvicorn.Config(
+        "src.main:app",
+        host="0.0.0.0",
+        port=10085,
+        loop="asyncio",  # 显式指定使用标准 asyncio 库
+        reload=False  # 注意：Windows 下开启 reload 会导致 loop 策略失效，请先关掉测试
+    )
+    server = uvicorn.Server(config)
+
+    # 2. 暴力启动方案：
+    # 如果 sys.platform == 'win32'，确保我们手动运行 loop
+    if sys.platform == 'win32':
+        loop = asyncio.SelectorEventLoop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(server.serve())
+    else:
+        server.run()

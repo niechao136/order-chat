@@ -7,7 +7,6 @@ if sys.platform == 'win32':
 import os
 from dotenv import load_dotenv
 
-import asyncpg
 from psycopg_pool import AsyncConnectionPool
 from psycopg import AsyncConnection
 from psycopg.rows import dict_row
@@ -27,34 +26,63 @@ database = os.getenv("POSTGRESQL_NAME", "order")
 admin_usr = os.getenv("ADMIN_USERNAME", "admin")
 admin_pwd = os.getenv("ADMIN_PASSWORD", "admin@123")
 
-_pool: asyncpg.Pool | None = None
+CONN_INFO = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+
+_pool: AsyncConnectionPool[AsyncConnection[dict]] | None = None
+
+
+def force_selector_loop():
+    if sys.platform == 'win32':
+        # 如果当前 loop 已经是 Proactor，或者尚未设置，强制更换
+        if not isinstance(asyncio.get_event_loop_policy(), asyncio.WindowsSelectorEventLoopPolicy):
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 async def init_pool():
     global _pool
-    print(f"init_pool: {_pool}")
-    _pool = await asyncpg.create_pool(
-        dsn=f"postgresql://{user}:{password}@{host}:{port}/{database}",
-        min_size=1,  # 最小连接数
-        max_size=20  # 最大连接数
+
+    force_selector_loop()
+
+    if _pool is not None:
+        return _pool
+
+    print(f"正在初始化数据库连接池...")
+    _pool = AsyncConnectionPool(
+        conninfo=CONN_INFO,
+        min_size=2,
+        max_size=20,
+        open=False,  # 设为 False，由下面的 .open() 显式开启
+        kwargs={
+            "row_factory": dict_row,  # 使得查询结果以字典形式返回，非常方便
+            "autocommit": True  # 开启自动提交，符合大多数 Web 应用逻辑
+        }
     )
-    print(f"init_pool: {_pool}")
+    await _pool.open()
+    print(f"连接池初始化成功: {_pool}")
+    return _pool
 
 
 async def close_pool():
-    await _pool.close()
+    global _pool
+    if _pool:
+        await _pool.close()
+        _pool = None
+        print("数据库连接池已关闭")
 
 
-async def get_db_pool() -> asyncpg.Pool:
+async def get_db_pool() -> AsyncConnectionPool[AsyncConnection[dict]]:
+    if _pool is None:
+        await init_pool()
     return _pool
 
 
 async def init_db():
     pool = await get_db_pool()
-    print(f"init_db: {pool}")
-    async with pool.acquire() as conn:
+
+    async with pool.connection() as conn:
         async with conn.transaction():
-            print(f"init_db 开始: {pool}")
+            print("开始执行数据库初始化 (Schema)...")
+
             # 创建函数
             await conn.execute("""
             CREATE OR REPLACE FUNCTION update_modified_column()
@@ -65,7 +93,7 @@ async def init_db():
             END;
             $$ language 'plpgsql';
             """)
-            print(f"init_db 创建函数: {pool}")
+
             # 创建用户表
             await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -78,7 +106,7 @@ async def init_db():
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
             """)
-            print(f"init_db 创建用户表: {pool}")
+
             # 绑定触发器
             await conn.execute("""
             DO $$
@@ -91,35 +119,13 @@ async def init_db():
                 END IF;
             END $$;
             """)
-            print(f"init_db 绑定触发器: {pool}")
+
             # 加入初始管理员
             hash_pwd = pwd_context.hash(admin_pwd)
             await conn.execute("""
             INSERT INTO users (username, password, role)
-            VALUES ($1, $2, 'admin')
+            VALUES (%s, %s, 'admin')
             ON CONFLICT (username) DO NOTHING;
-            """, admin_usr, hash_pwd)
-            print(f"init_db 加入初始管理员: {pool}")
+            """, (admin_usr, hash_pwd))
 
-
-_conn: AsyncConnectionPool[AsyncConnection[dict]] | None = None
-
-async def init_conn():
-    global _conn
-    print(f"init_conn: {_conn}")
-    _conn = AsyncConnectionPool(
-        conninfo=f"postgresql://{user}:{password}@{host}:{port}/{database}",
-        max_size=20,
-        open=False,
-        kwargs={
-            "row_factory": dict_row,
-            "autocommit": True
-        }
-    )
-    await _conn.open()
-    print(f"init_conn: {_conn}")
-
-async def get_db_conn() -> AsyncConnectionPool[AsyncConnection[dict]]:
-    if not _conn:
-        await init_conn()
-    return _conn
+            print("数据库初始化完成：Schema 创建成功，管理员用户已就绪。")

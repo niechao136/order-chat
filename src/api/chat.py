@@ -3,12 +3,12 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import BaseMessage, HumanMessage, BaseMessageChunk
+from langchain_core.messages import BaseMessage, HumanMessage, BaseMessageChunk, AIMessage
 
 from src.database.postgre import get_db_pool
 from src.find_agent.graph import create_find_graph
 from src.schemas.auth import TokenDict
-from src.schemas.chat import ThreadItem, ChatReq
+from src.schemas.chat import ThreadItem, ChatReq, ChatMessage
 from src.schemas.page import NoPageResult
 from src.utils.jwt import get_current_user
 
@@ -39,34 +39,51 @@ async def get_all_threads(graph: str, user: TokenDict = Depends(get_current_user
         raise HTTPException(status_code=404, detail=f"Graph {graph} not found")
 
     pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("""
-        SELECT thread_id, MAX(checkpoint_id) as last_update
-        FROM checkpoints
-        WHERE checkpoint_ns = $1 AND thread_id LIKE $2
-        GROUP BY thread_id
-        ORDER BY last_update DESC
-        """, f"graph_{graph}", f"user_{user.id}_%")
-        total = await conn.fetchval("""
-        SELECT COUNT(*)
-        FROM checkpoints
-        WHERE checkpoint_ns = $1 AND thread_id LIKE $2
-        """, f"graph_{graph}", f"user_{user.id}_%")
+    thread_pattern = f"{graph}:user_{user.id}_%"
+
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            """
+            SELECT thread_id, MAX(checkpoint_id) as last_update
+            FROM checkpoints
+            WHERE thread_id LIKE %s
+            GROUP BY thread_id
+            ORDER BY last_update DESC
+            """, (thread_pattern,))
+        rows = await cur.fetchall()
+
+        cur = await conn.execute(
+            """
+            SELECT COUNT(DISTINCT thread_id)
+            FROM checkpoints
+            WHERE thread_id LIKE %s
+            """, (thread_pattern,))
+        row_count = await cur.fetchone()
+        total = row_count.get("count") if isinstance(row_count, dict) else row_count[0]
 
     res = []
     for t in rows:
         thread_id = t["thread_id"]
-        config = {"configurable": {"thread_id": thread_id, "checkpoint_ns": f"graph_{graph}"}}
+        config = {
+            "configurable": {
+                "thread_id": thread_id
+            }
+        }
 
-        state = await agent.get_state(config)
+        state = await agent.aget_state(config)
 
         messages = state.values.get("messages", [])
 
         first_msg = ""
         if messages:
-            first_msg = messages[0].content[:50]  # 只取前50个字符
+            msg_content = messages[0].content
+            first_msg = (msg_content[:50] + "...") if len(msg_content) > 50 else msg_content
 
-        res.append(ThreadItem(thread_id=thread_id, summary=first_msg, last_id=t["last_update"]))
+        res.append(ThreadItem(
+            thread_id=thread_id.replace(f"{graph}:", "", 1),
+            summary=first_msg,
+            last_id=t["last_update"])
+        )
 
     return NoPageResult(
         total=total,
@@ -83,10 +100,10 @@ async def send_message_stream(graph: str, thread_id: str, req: ChatReq):
     if not agent:
         raise HTTPException(status_code=404, detail=f"Graph {graph} not found")
 
+    scoped_thread_id = f"{graph}:{thread_id}"
     config = {
         "configurable": {
-            "thread_id": thread_id,
-            "checkpoint_ns": f"graph_{graph}"  # 确保与 ainvoke 时一致
+            "thread_id": scoped_thread_id
         }
     }
 
@@ -118,7 +135,7 @@ async def send_message_stream(graph: str, thread_id: str, req: ChatReq):
     )
 
 
-@chat_router.get("/{graph}/{thread_id}", response_model=NoPageResult[BaseMessage])
+@chat_router.get("/{graph}/{thread_id}", response_model=NoPageResult[ChatMessage])
 async def get_chat_history(graph: str, thread_id: str):
     """
     获取某个对话的完整历史记录。
@@ -127,18 +144,35 @@ async def get_chat_history(graph: str, thread_id: str):
     if not agent:
         raise HTTPException(status_code=404, detail=f"Graph {graph} not found")
 
+    scoped_thread_id = f"{graph}:{thread_id}"
     config = {
         "configurable": {
-            "thread_id": thread_id,
-            "checkpoint_ns": f"graph_{graph}"  # 确保与 ainvoke 时一致
+            "thread_id": scoped_thread_id
         }
     }
 
-    state = await agent.get_state(config)
+    state = await agent.aget_state(config)
 
     if not state or not state.values:
         return NoPageResult(total=0, data=[])
 
     messages: List[BaseMessage] = state.values.get("messages", [])
+    data: List[ChatMessage] = []
 
-    return NoPageResult(total=len(messages), data=messages)
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            data.append(ChatMessage(
+                id=msg.id,
+                role="user",
+                content=msg.content
+            ))
+        elif isinstance(msg, AIMessage) and not msg.tool_calls:
+            content = msg.content[0].get("text", "")
+            data.append(ChatMessage(
+                id=msg.id,
+                role="assistant",
+                content=content
+            ))
+
+
+    return NoPageResult(total=len(data), data=data)

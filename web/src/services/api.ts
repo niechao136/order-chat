@@ -27,7 +27,7 @@ export async function apiRequest(url: string, options: RequestInit = {}) {
   return response;
 }
 
-function handleLogout() {
+export function handleLogout() {
   Cookies.remove('token');
   // 使用 window.location 强制跳转，确保清理所有内存状态（如 Context/Zustand）
   window.location.href = '/login';

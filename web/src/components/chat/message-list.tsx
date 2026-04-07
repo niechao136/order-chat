@@ -29,7 +29,6 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
             key={msg.id}
             role={msg.role}
             content={msg.content}
-            node={msg.node}
           />
         ))}
         {messages.length === 0 && (

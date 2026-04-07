@@ -15,29 +15,30 @@ user_router = APIRouter(prefix="/user", tags=["User"])
 @user_router.get("/", response_model=PageResult[UserInfo])
 async def user_list(params: PageParams = Depends(), _: TokenDict = Depends(get_current_admin)):
     pool = await get_db_pool()
-    async with pool.acquire() as conn:
+    async with pool.connection() as conn:
         base_query = "FROM users WHERE 1=1"
         args = []
 
         if params.keyword:
             args.append(f"%{params.keyword}%")
-            base_query += f" AND (username ILIKE ${len(args)} OR email ILIKE ${len(args)})"
+            args.append(f"%{params.keyword}%")
+            base_query += " AND (username ILIKE %s OR email ILIKE %s)"
 
         count_query = f"SELECT COUNT(*) {base_query}"
-        total = await conn.fetchval(count_query, *args)
+        cur = await conn.execute(count_query, tuple(args))
+        row = await cur.fetchone()
+        total = row.get("count") if isinstance(row, dict) else row[0]
 
         sort_field = params.order_by if params.order_by in ["created_at", "username"] else "id"
-
         final_query = f"""
-        SELECT id, username, email, role, created_at, updated_at 
-        {base_query}
-        ORDER BY {sort_field} {params.direction}
-        LIMIT ${len(args) + 1} OFFSET ${len(args) + 2}
-        """
-
+                SELECT id, username, email, role, created_at, updated_at 
+                {base_query}
+                ORDER BY {sort_field} {params.direction}
+                LIMIT %s OFFSET %s
+                """
         args.extend([params.size, params.offset])
-        rows = await conn.fetch(final_query, *args)
-
+        cur = await conn.execute(final_query, tuple(args))
+        rows = await cur.fetchall()
 
         return PageResult(
             total=total,
@@ -50,44 +51,49 @@ async def user_list(params: PageParams = Depends(), _: TokenDict = Depends(get_c
 @user_router.get("/me", response_model=DataResult[UserInfo])
 async def current_user(user: TokenDict = Depends(get_current_user)):
     pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
+    async with pool.connection() as conn:
+        cur = await conn.execute(
             """
             SELECT id, username, email, role, created_at, updated_at
             FROM users
-            WHERE id = $1
-            """, int(user.id))
+            WHERE id = %s
+            """, (int(user.id),))
+        row = await cur.fetchone()
         return DataResult(status=1, data=UserInfo(**hand_id(row)), msg=None)
 
 
 @user_router.get("/{user_id}", response_model=DataResult[UserInfo])
 async def user_info(user_id: str, _: TokenDict = Depends(get_current_admin)):
     pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
+    async with pool.connection() as conn:
+        cur = await conn.execute(
             """
             SELECT id, username, email, role, created_at, updated_at
             FROM users
-            WHERE id = $1
-            """, int(user_id))
+            WHERE id = %s
+            """, (int(user_id),))
+        row = await cur.fetchone()
         return DataResult(status=1, data=UserInfo(**hand_id(row)), msg=None)
 
 
 @user_router.post("/", response_model=DataResult[UserInfo])
 async def add_user(user: UserAdd, _: TokenDict = Depends(get_current_admin)):
     pool = await get_db_pool()
-    async with pool.acquire() as conn:
+    async with pool.connection() as conn:
         async with conn.transaction():
-            exists = await conn.fetchval("SELECT 1 FROM users WHERE username=$1", user.username)
-            if exists:
+            cur = await conn.execute("SELECT 1 FROM users WHERE username = %s", (user.username,))
+            if await cur.fetchone():
                 return DataResult(status=0, msg="Username already exists", data=None)
+
             hash_pwd = pwd_context.hash(user.password)
-            row = await conn.fetchrow(
+            cur = await conn.execute(
                 """
                 INSERT INTO users (username, email, password, role)
-                VALUES ($1, $2, $3, $4)
+                VALUES (%s, %s, %s, %s)
                 RETURNING id, username, email, role, created_at, updated_at
-                """, user.username, user.email, hash_pwd, user.role)
+                """, (user.username, user.email, hash_pwd, user.role))
+            row = await cur.fetchone()
+
             info = UserInfo(**hand_id(row))
             return DataResult(status=1, msg=None, data=info)
 
@@ -95,27 +101,29 @@ async def add_user(user: UserAdd, _: TokenDict = Depends(get_current_admin)):
 @user_router.put("/{user_id}", response_model=DataResult[UserInfo])
 async def update_user(user_id: str, user: UserUpdate, _: TokenDict = Depends(get_current_admin)):
     pool = await get_db_pool()
-    async with pool.acquire() as conn:
+    async with pool.connection() as conn:
         async with conn.transaction():
             target_id = int(user_id)
-            current_row = await conn.fetchrow("SELECT id FROM users WHERE id = $1", target_id)
-            if not current_row:
+            cur = await conn.execute("SELECT id FROM users WHERE id = %s", (target_id,))
+            if not await cur.fetchone():
                 return DataResult(status=0, msg="User not found", data=None)
 
-            conflict = await conn.fetchval(
-                "SELECT 1 FROM users WHERE (username = $1 OR email = $2) AND id != $3",
-                user.username, user.email, target_id
+            cur = await conn.execute(
+                "SELECT 1 FROM users WHERE (username = %s OR email = %s) AND id != %s",
+                (user.username, user.email, target_id)
             )
-            if conflict:
+            if await cur.fetchone():
                 return DataResult(status=0, msg="Username or Email already taken", data=None)
 
-            row = await conn.fetchrow(
+            cur = await conn.execute(
                 """
-                UPDATE users 
-                SET username=$1, email=$2, role=$3
-                WHERE id=$4
+                UPDATE users
+                SET username = %s, email = %s, role = %s
+                WHERE id = %s
                 RETURNING id, username, email, role, created_at, updated_at
-                """, user.username, user.email, user.role, target_id)
+                """, (user.username, user.email, user.role, target_id))
+            row = await cur.fetchone()
+
             info = UserInfo(**hand_id(row))
             return DataResult(status=1, msg=None, data=info)
 
@@ -123,23 +131,23 @@ async def update_user(user_id: str, user: UserUpdate, _: TokenDict = Depends(get
 @user_router.patch("/me/password", response_model=DataResult[str])
 async def change_my_password(info: UserPassword, user: TokenDict = Depends(get_current_user)):
     pool = await get_db_pool()
-    async with pool.acquire() as conn:
+    async with pool.connection() as conn:
         async with conn.transaction():
             new_hash = pwd_context.hash(info.password)
-            await conn.execute("UPDATE users SET password = $1 WHERE id = $2", new_hash, int(user.id))
+            await conn.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, int(user.id)))
             return DataResult(status=1, msg=None, data=None)
 
 
 @user_router.patch("/{user_id}/password", response_model=DataResult[str])
 async def admin_reset_password(user_id: str, info: UserPassword, _: TokenDict = Depends(get_current_admin)):
     pool = await get_db_pool()
-    async with pool.acquire() as conn:
+    async with pool.connection() as conn:
         async with conn.transaction():
             target_id = int(user_id)
-            current_row = await conn.fetchrow("SELECT id FROM users WHERE id = $1", target_id)
-            if not current_row:
+            cur = await conn.execute("SELECT id FROM users WHERE id = %s", (target_id,))
+            if not await cur.fetchone():
                 return DataResult(status=0, msg="User not found", data=None)
 
             new_hash = pwd_context.hash(info.password)
-            await conn.execute("UPDATE users SET password = $1 WHERE id = $2", new_hash, target_id)
+            await conn.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, target_id))
             return DataResult(status=1, msg=None, data=None)

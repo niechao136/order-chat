@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, ReactNode } from 'react';
+import { useEffect, useMemo, ReactNode } from 'react';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 import { ChatSidebar } from '@/components/chat/sidebar';
 import {
@@ -13,10 +13,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { useGlobal } from '@/context/global-context';
-import { getThreadList } from '@/services/chat'
-import { ChatThread } from '@/types/chat'
-import { UserInfo } from '@/types/user'
+import { useGraph, useOwner, useThreads } from '@/hooks/use-query';
 
 export function ChatBody({ children }: {
   children: ReactNode;
@@ -24,43 +21,33 @@ export function ChatBody({ children }: {
   const params = useParams();
   const graph = params.graph as string;
   const thread_id = params.thread_id as string;
+  const router = useRouter();
 
-  const [ graphs, setGraphs ] = useState<string[]>([]);
-  const [ threads, setThreads ] = useState<ChatThread[]>([]);
-  const [ owner, setOwner ] = useState<UserInfo | null>(null);
-  const def_title = '欢迎提问'
-  const [ title, setTitle ] = useState<string>(def_title);
-  const { getGraph, getOwner } = useGlobal()
+  const { data: graphs } = useGraph();
+  const { data: owner } = useOwner();
+  const { data: threads } = useThreads(graph ?? '', graphs ?? []);
+  const title = useMemo(() => {
+    const def_title = '欢迎提问';
+    if (!thread_id || !threads) return def_title;
+
+    // 从已有的 threads 缓存中查找匹配项
+    const currentThread = threads.find(o => o.thread_id === thread_id);
+    return currentThread?.summary ?? def_title;
+  }, [threads, thread_id]);
 
   useEffect(() => {
-    const abort = new AbortController()
-
-    const fetchData = async () => {
-      const graph_arr = await getGraph()
-      setGraphs(graph_arr)
-
-      const owner = await getOwner()
-      setOwner(owner)
-
-      const res_t = await getThreadList(graph, abort)
-
-      setThreads(res_t.data)
-      setTitle(!!thread_id ? res_t.data.find(o => o.thread_id === thread_id)?.summary ?? def_title : def_title)
+    console.log(graph, graphs)
+    if (Array.isArray(graphs) && !!graph && !graphs.includes(graph)) {
+      router.push(`/${graphs?.[0]}`);
     }
-
-    fetchData().then()
-
-    return () => {
-      abort.abort('页面注销')
-    }
-  }, [getGraph, getOwner, graph, thread_id])
+  }, [graph, graphs, router])
 
   return (
     <SidebarProvider>
       <ChatSidebar
-        graphs={graphs}
-        owner={owner}
-        threads={threads}
+        graphs={graphs ?? []}
+        owner={owner ?? null}
+        threads={threads ?? []}
       />
       <SidebarInset>
         <header
