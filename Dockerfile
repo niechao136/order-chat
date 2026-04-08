@@ -1,6 +1,14 @@
 # 使用高效的 python 镜像
 FROM python:3.11-slim-bookworm
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ADD https://astral.sh/uv/install.sh /install.sh
+RUN chmod +x /install.sh && /install.sh && rm /install.sh
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /app
 
