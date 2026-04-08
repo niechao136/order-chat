@@ -37,7 +37,8 @@ async def call_model(state: AgentState, config: RunnableConfig):
 async def format_node(state: AgentState, config: RunnableConfig):
     sys_msg = SystemMessage(content=SYSTEM_PROMPT)
     response = await llm_with_format.ainvoke([sys_msg] + state.messages, config)
-    return {"messages": [response]}
+    content = response.model_dump_json()
+    return {"messages": [AIMessage(content=content)]}
 
 
 
