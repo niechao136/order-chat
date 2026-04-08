@@ -93,9 +93,22 @@ export function useSendMsg(graph: string) {
       onChunk: (content: string, node?: string) => void;
       onSuccess?: () => void;
       onError?: () => void;
-    }) =>
-      sendMessage(graph, thread_id, content, onChunk, onSuccess),
+    }) => {
+      const onDone = async () => {
+        // 对话完成后，刷新历史
+        await queryClient.invalidateQueries({
+          queryKey: [ 'chat', 'history', graph, thread_id ]
+        });
 
+        // 对话完成后，刷新侧边栏
+        await queryClient.invalidateQueries({ queryKey: threadsQueryKey });
+
+        // 执行调用方传入的成功回调
+        onSuccess?.()
+      }
+
+      return sendMessage(graph, thread_id, content, onChunk, onDone)
+    },
     onMutate: async ({ thread_id, content }) => {
       const historyQueryKey = ['chat', 'history', graph, thread_id];
 
@@ -167,18 +180,6 @@ export function useSendMsg(graph: string) {
 
       // 3. 执行回调
       onError?.();
-    },
-    onSuccess: async (data, variables) => {
-      console.log(data);
-      const { thread_id } = variables;
-      // 仅在成功时刷新历史记录
-      await queryClient.invalidateQueries({
-        queryKey: [ 'chat', 'history', graph, thread_id ]
-      });
-    },
-    onSettled: async () => {
-      // 无论成败都可以尝试刷新侧边栏，确保列表状态正确
-      await queryClient.invalidateQueries({ queryKey: threadsQueryKey });
     },
   })
 }
