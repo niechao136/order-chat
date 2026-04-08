@@ -11,9 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# 4. 通过脚本安装 uv，并直接重定向安装路径
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    mv /root/.local/bin/uv* /usr/local/bin/
+# 4. 直接安装 uv (它会自动装到 /usr/local/bin)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 WORKDIR /app
 
