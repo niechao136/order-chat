@@ -11,42 +11,39 @@ from .util import format_product
 
 
 @tool
-async def search_product(query: str, top_k: int = 5, config: RunnableConfig = None) -> List[ProductItem]:
+async def search_product(query: str, top_k: int, config: RunnableConfig = None) -> List[ProductItem]:
     """
     当你认为当前信息不足以回答用户，需要搜索商品信息时，调用此工具。
 
     参数:
     - query: 搜索关键词。
-    - top_k: 【关键参数】请根据用户意图动态调整：
-        1. 如果用户询问特定的一两个商品，请设为 3。
-        2. 如果用户要求“多推荐几个”、“看看有哪些”或意图模糊，请务必设为 10。
-        3. 默认情况请设为 5。
+    - top_k: [重要] 请严格根据意图二选一：
+        - 设为 3: 用户寻找“特定”目标（如：指名道姓问某个商品、问价格）。
+        - 设为 10: 用户寻找“一组”目标（如：要求推荐、问有哪些、看所有的、意图模糊）。
     """
+    print(f"调用 search_product 工具, query: {query}, top_k: {top_k}")
+
     configurable = config.get("configurable", {})
     collection_name = configurable.get("collection_name", "WayFind")
 
+    if not top_k or top_k > 10:
+        top_k = 10
     if top_k < 3:
         top_k = 3
-    if top_k > 10:
-        top_k = 10
 
     client = get_qdrant_client()
     if not client:
         init_qdrant()
         client = get_qdrant_client()
 
-    print("DEBUG: [3] 获取到 Qdrant Client")
-    print(f"DEBUG: [4] 开始计算向量, Query: {query}")
     vector = await get_embedding_async(text=query)
-    print("DEBUG: [5] 向量计算完成")
-    print(f"DEBUG: [6] 开始请求 Qdrant query_points，collection_name={collection_name}")
+
     rows = client.query_points(
         collection_name=collection_name,
         query=cast(Any, vector),
         limit=top_k,
         with_payload=True
     )
-    print(f"DEBUG: [7] Qdrant 返回了 {len(rows.points)} 条数据")
     return [format_product(o.payload.get("content", "")) for o in rows.points]
 
 
