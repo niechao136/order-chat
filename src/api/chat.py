@@ -24,7 +24,7 @@ async def get_graph_by_name(graph: str):
     return None
 
 
-@chat_router.get("/", response_model=List[str])
+@chat_router.get("", response_model=List[str])
 async def get_graph(_: TokenDict = Depends(get_current_user)):
     return GRAPH_LIST
 

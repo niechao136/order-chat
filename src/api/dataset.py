@@ -18,14 +18,14 @@ from src.utils.jwt import get_current_admin
 dataset_router = APIRouter(prefix="/dataset", tags=["Dataset"], dependencies=[Depends(get_current_admin)])
 
 
-@dataset_router.get("/", response_model=NoPageResult[CollectionDescription])
+@dataset_router.get("", response_model=NoPageResult[CollectionDescription])
 async def collection_list(client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     rows = await client.get_collections()
     data = rows.collections
     return NoPageResult(total=len(data), data=data)
 
 
-@dataset_router.post("/", response_model=DataResult[CollectionInfo])
+@dataset_router.post("", response_model=DataResult[CollectionInfo])
 async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(req.name)
     if exist:

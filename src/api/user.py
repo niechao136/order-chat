@@ -12,7 +12,7 @@ from src.utils.pwd import pwd_context
 user_router = APIRouter(prefix="/user", tags=["User"])
 
 
-@user_router.get("/", response_model=PageResult[UserInfo])
+@user_router.get("", response_model=PageResult[UserInfo])
 async def user_list(params: PageParams = Depends(), _: TokenDict = Depends(get_current_admin)):
     pool = await get_db_pool()
     async with pool.connection() as conn:
@@ -76,7 +76,7 @@ async def user_info(user_id: str, _: TokenDict = Depends(get_current_admin)):
         return DataResult(status=1, data=UserInfo(**hand_id(row)), msg=None)
 
 
-@user_router.post("/", response_model=DataResult[UserInfo])
+@user_router.post("", response_model=DataResult[UserInfo])
 async def add_user(user: UserAdd, _: TokenDict = Depends(get_current_admin)):
     pool = await get_db_pool()
     async with pool.connection() as conn:
