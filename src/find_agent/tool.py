@@ -13,7 +13,7 @@ from .util import format_product
 @tool
 async def search_product(query: str, top_k: int = 5, config: RunnableConfig = None) -> List[ProductItem]:
     """
-    搜索店铺内的商品、价格及营业信息。
+    当你认为当前信息不足以回答用户，需要搜索商品信息时，调用此工具。
 
     参数:
     - query: 搜索关键词。
@@ -46,3 +46,11 @@ async def search_product(query: str, top_k: int = 5, config: RunnableConfig = No
     )
     print(f"DEBUG: [7] Qdrant 返回了 {len(rows.points)} 条数据")
     return [format_product(o.payload.get("content", "")) for o in rows.points]
+
+
+@tool
+async def complete_task():
+    """
+    当你认为已经获取了足够信息，不需要再查询产品即可回答用户时，调用此工具。
+    """
+    return "已准备好进行最终格式化"

@@ -10,15 +10,16 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 
 from src.database.checkpointer import get_checkpointer
-from src.schemas.find_agent import AgentState
+from src.schemas.find_agent import AgentState, OutputSchema
 
 from .llm import base
 from .prompt import BRAIN_SYSTEM_PROMPT, SYSTEM_PROMPT
-from .tool import search_product
+from .tool import search_product, complete_task
 
 
-tools = [search_product]
-llm_with_tool = base.bind_tools(tools=tools)
+tools = [search_product, complete_task]
+llm_with_tool = base.bind_tools(tools=tools, tool_choice="required")
+llm_with_format = base.with_structured_output(schema=OutputSchema)
 
 
 async def call_model(state: AgentState, config: RunnableConfig):
@@ -35,7 +36,7 @@ async def call_model(state: AgentState, config: RunnableConfig):
 
 async def format_node(state: AgentState, config: RunnableConfig):
     sys_msg = SystemMessage(content=SYSTEM_PROMPT)
-    response = await base.ainvoke([sys_msg] + state.messages, config)
+    response = await llm_with_format.ainvoke([sys_msg] + state.messages, config)
     return {"messages": [response]}
 
 
