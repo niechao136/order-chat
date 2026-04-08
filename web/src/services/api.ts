@@ -1,27 +1,55 @@
 import Cookies from 'js-cookie';
 
 
+export async function getToken() {
+
+  if (typeof window === 'undefined') {
+    // 服务端环境
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    return cookieStore.get('token')?.value ?? '';
+  }
+
+  // 客户端环境
+  return Cookies.get('token') ?? '';
+}
+
+
+export function getBaseUrl() {
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+
 export async function apiRequest(url: string, options: RequestInit = {}) {
-  const token = Cookies.get('token') ?? '';
+  const token = await getToken();
+  const baseUrl = getBaseUrl();
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
 
   const defaultHeaders = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${url}`, {
+  const response = await fetch(`${baseUrl}${cleanUrl}`, {
     ...options,
     headers: { ...defaultHeaders, ...options.headers },
   });
 
   if (response.status === 401) {
-    handleLogout();
-    throw new Error('会话已过期，请重新登录');
+    if (typeof window !== 'undefined') {
+      handleLogout();
+    }
+    throw new Error('UNAUTHORIZED');
   }
 
   if (response.status === 403) {
-    handleForbidden();
-    throw new Error('会话已过期，请重新登录');
+    if (typeof window !== 'undefined') {
+      handleForbidden();
+    }
+    throw new Error('FORBIDDEN');
   }
 
   return response;

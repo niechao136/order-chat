@@ -1,6 +1,4 @@
-import Cookies from "js-cookie";
-
-import { apiRequest } from '@/services/api';
+import { apiRequest, getToken, getBaseUrl } from '@/services/api';
 import { PageResult } from '@/types/api';
 import { ChatThread, ChatMessage } from '@/types/chat';
 
@@ -34,9 +32,10 @@ export async function sendMessage(
   onDone?: () => void // 结束时的回调
 ) {
 
-  const token = Cookies.get('token');
+  const token = await getToken();
+  const baseUrl = getBaseUrl();
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}chat/${graph}/${thread_id}`, {
+  const response = await fetch(`${baseUrl}/chat/${graph}/${thread_id}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

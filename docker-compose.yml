@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # 后端 Python API
+  api:
+    build: .
+    container_name: order-chat-backend
+    env_file: .env
+    networks:
+      - chat-network
+
+  # 前端 Node.js Server
+  web:
+    build: ./web
+    container_name: order-chat-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=/api
+    networks:
+      - chat-network
+
+  # Nginx 总入口
+  gateway:
+    image: nginx:alpine
+    container_name: order-chat-gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - web
+    networks:
+      - chat-network
+
+networks:
+  chat-network:
+    driver: bridge
