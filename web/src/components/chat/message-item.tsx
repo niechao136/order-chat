@@ -1,4 +1,4 @@
-import React from 'react';
+import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { User, Bot } from 'lucide-react';
@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MessageRole } from '@/types/chat';
 
 
-export function MessageItem({ role, content }: {
+export function MsgItem({ role, content }: {
   role: MessageRole;
   content: string;
 }) {
@@ -38,3 +38,6 @@ export function MessageItem({ role, content }: {
     </div>
   );
 }
+
+
+export const MessageItem = memo(MsgItem)

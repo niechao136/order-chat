@@ -1,7 +1,7 @@
 'use client';
 
 import { Send, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { v7 } from 'uuid';
 
@@ -10,7 +10,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { MessageList } from '@/components/chat/message-list';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useOwner, useSendMsg, useUpdate, useHistory } from '@/hooks/use-query';
+import { useOwner, useSendMsg, useUpdate, useHistory, TEMP_AI } from '@/hooks/use-query';
 
 export default function GraphPage() {
 
@@ -20,11 +20,22 @@ export default function GraphPage() {
 
   const [input, setInput] = useState('');
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [streamingContent, setStreamingContent] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
 
   const { data: owner } = useOwner();
   const { mutate: startChat } = useSendMsg(graph);
   const { updateMsg } = useUpdate();
   const { data: history } = useHistory(graph, threadId ?? '');
+
+  const displayMessages = useMemo(() => {
+    const msgs = history ?? [];
+    if (!isStreaming) return msgs;
+
+    return msgs.map(o =>
+      o.id === TEMP_AI ? { ...o, content: streamingContent } : o
+    );
+  }, [ history, isStreaming, streamingContent ]);
 
   const handleStartChat = async () => {
 
@@ -35,20 +46,27 @@ export default function GraphPage() {
 
     setInput('');
     setThreadId(thread_id);
+    setStreamingContent('');
+    setIsStreaming(true);
 
     startChat({
       thread_id,
       content,
-      onChunk: (chunk: string) => updateMsg(chunk, graph, thread_id),
+      onChunk: (chunk: string) => {
+        setStreamingContent(prev => prev + chunk);
+        updateMsg(chunk, graph, thread_id);
+      },
       onError: () => {
         setInput(content);
         setThreadId(null);
+        setIsStreaming(false);
         toast.error('消息发送失败，请检查网络连接');
       },
-      onSuccess: () => {
+      onFinished: () => {
+        setIsStreaming(false);
         // 流结束后跳转，此时侧边栏已经有了（乐观更新注入的），不会有空档期
         router.replace(`/chat/${graph}/${thread_id}`, { scroll: false });
-      }
+      },
     });
   };
 
@@ -57,7 +75,7 @@ export default function GraphPage() {
       {!!threadId
         ? (
           <MessageList
-            messages={history ?? []}
+            messages={displayMessages}
           />
         )
         : (

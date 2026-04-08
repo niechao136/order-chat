@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { MessageItem } from '@/components/chat/message-item';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatMessage } from '@/types/chat';
 
-export function MessageList({ messages }: { messages: ChatMessage[] }) {
+export function MsgList({ messages }: { messages: ChatMessage[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 只要消息列表长度或内容发生变化，就滚动到底部
@@ -40,3 +40,6 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
     </ScrollArea>
   );
 }
+
+
+export const MessageList = memo(MsgList)

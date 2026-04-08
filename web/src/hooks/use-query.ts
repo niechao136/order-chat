@@ -7,6 +7,10 @@ import { getOwnerInfo } from '@/services/user';
 import { ChatThread, ChatMessage } from '@/types/chat';
 
 
+export const TEMP_AI = 'temp-ai'
+export const TEMP_USER = 'temp-user'
+
+
 export function useFetch() {
   const queryClient = useQueryClient();
 
@@ -33,12 +37,16 @@ export function useUpdate() {
       [ 'chat', 'history', graph, thread_id ],
       (old) => {
         if (!old) return old;
-        const newHistory = [ ...old ];
-        const lastMsg = newHistory[newHistory.length - 1];
-        if (lastMsg && lastMsg.role === 'assistant') {
-          lastMsg.content += chunk;
-        }
-        return newHistory;
+
+        return old.map(o => {
+          if (o.id === TEMP_AI) {
+            return {
+              ...o,
+              content: o.content + chunk
+            }
+          }
+          return o
+        });
       }
     );
   }
@@ -87,11 +95,11 @@ export function useSendMsg(graph: string) {
   const threadsQueryKey = ['chat', 'threads', graph];
 
   return useMutation({
-    mutationFn: ({ thread_id, content, onChunk, onSuccess }: {
+    mutationFn: ({ thread_id, content, onChunk, onFinished }: {
       thread_id: string;
       content: string;
       onChunk: (content: string, node?: string) => void;
-      onSuccess?: () => void;
+      onFinished?: () => void;
       onError?: () => void;
     }) => {
       const onDone = async () => {
@@ -104,7 +112,7 @@ export function useSendMsg(graph: string) {
         await queryClient.invalidateQueries({ queryKey: threadsQueryKey });
 
         // 执行调用方传入的成功回调
-        onSuccess?.()
+        onFinished?.()
       }
 
       return sendMessage(graph, thread_id, content, onChunk, onDone)
@@ -149,12 +157,12 @@ export function useSendMsg(graph: string) {
 
       // 4. 乐观更新消息历史
       const userMsg: ChatMessage = {
-        id: `temp-user-${Date.now()}`,
+        id: TEMP_USER,
         role: 'user',
         content: content,
       };
       const aiMsg: ChatMessage = {
-        id: `temp-ai-${Date.now()}`,
+        id: TEMP_AI,
         role: 'assistant',
         content: '', // 初始为空，由 onChunk 更新
       };

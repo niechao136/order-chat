@@ -1,7 +1,7 @@
 'use client';
 
 import { Send } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { useParams } from 'next/navigation';
@@ -9,7 +9,7 @@ import { useParams } from 'next/navigation';
 import { MessageList } from '@/components/chat/message-list';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useSendMsg, useHistory, useUpdate } from '@/hooks/use-query';
+import { useSendMsg, useHistory, useUpdate, TEMP_AI } from '@/hooks/use-query';
 
 
 export default function ThreadPage() {
@@ -23,6 +23,17 @@ export default function ThreadPage() {
   const { updateMsg } = useUpdate();
 
   const [input, setInput] = useState('');
+  const [streamingContent, setStreamingContent] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  const displayMessages = useMemo(() => {
+    const msgs = history ?? [];
+    if (!isStreaming) return msgs;
+
+    return msgs.map(o =>
+      o.id === TEMP_AI ? { ...o, content: streamingContent } : o
+    );
+  }, [ history, isStreaming, streamingContent ]);
 
   const handleSendMsg = async () => {
 
@@ -31,14 +42,23 @@ export default function ThreadPage() {
     const content = input;
 
     setInput('');
+    setStreamingContent('');
+    setIsStreaming(true);
 
     sendMsg({
       thread_id,
       content,
-      onChunk: (chunk: string) => updateMsg(chunk, graph, thread_id),
+      onChunk: (chunk: string) => {
+        setStreamingContent(prev => prev + chunk);
+        updateMsg(chunk, graph, thread_id);
+      },
       onError: () => {
         setInput(content);
+        setIsStreaming(false);
         toast.error("消息发送失败，请检查网络连接");
+      },
+      onFinished: () => {
+        setIsStreaming(false);
       },
     });
   };
@@ -46,7 +66,7 @@ export default function ThreadPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4">
       <MessageList
-        messages={history ?? []}
+        messages={displayMessages}
       />
 
       <div className="max-w-3xl w-full sticky bottom-8">
