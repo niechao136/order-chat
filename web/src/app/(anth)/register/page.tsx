@@ -75,7 +75,7 @@ export default function RegisterPage() {
       return
     }
 
-    router.push(`/${graph[0]}`);
+    router.push(`/chat/${graph[0]}`);
   }
 
   return (

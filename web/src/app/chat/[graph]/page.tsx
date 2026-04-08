@@ -51,7 +51,7 @@ export default function GraphPage() {
       },
       onDone: () => {
         // 流结束后跳转，此时侧边栏已经有了（乐观更新注入的），不会有空档期
-        router.replace(`/${graph}/${thread_id}`, { scroll: false });
+        router.replace(`/chat/${graph}/${thread_id}`, { scroll: false });
       },
     });
   };

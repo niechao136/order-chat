@@ -79,19 +79,31 @@ export function useStartChat(graph: string) {
       // 2. 保存备份
       const previousThreads = queryClient.getQueryData(queryKey);
 
-      // 3. 乐观地插入一个新对话到侧边栏列表
-      const optimisticThread: ChatThread = {
-        thread_id: thread_id,
-        summary: content, // 初始标题通常是首条消息
-        last_id: new Date().toISOString(),
-      };
-
-      console.log(previousThreads, optimisticThread)
-
+      // 3. 执行乐观更新
       queryClient.setQueryData<ChatThread[]>(queryKey, (old) => {
         const oldList = Array.isArray(old) ? old : [];
-        console.log(old, oldList)
-        return [ optimisticThread, ...oldList ];
+
+        // 检查该 thread_id 是否已在列表中
+        const exists = oldList.find(t => t.thread_id === thread_id);
+
+        if (exists) {
+          // --- 旧对话逻辑 ---
+          // 1. 过滤掉旧的该对话项
+          const filtered = oldList.filter(t => t.thread_id !== thread_id);
+          // 2. 将其置顶，并更新最后活跃时间（可选是否更新 summary）
+          return [
+            exists,
+            ...filtered
+          ];
+        } else {
+          // --- 新对话逻辑 ---
+          const optimisticThread: ChatThread = {
+            thread_id: thread_id,
+            summary: content, // 初始标题通常是首条消息
+            last_id: new Date().toISOString()
+          };
+          return [ optimisticThread, ...oldList ];
+        }
       });
 
       return { previousThreads };

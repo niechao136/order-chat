@@ -79,8 +79,12 @@ export async function sendMessage(
 
       // 4. 解析 JSON 并回调
       try {
-        const { content, node } = JSON.parse(data);
-        if (content) {
+        const parsed = JSON.parse(data);
+        const content = parsed.content;
+        const node = parsed.node;
+        if (Array.isArray(content)) {
+          onChunk(content[0]?.text ?? '', node);
+        } else if (typeof content === 'string') {
           onChunk(content, node);
         }
       } catch (e) {

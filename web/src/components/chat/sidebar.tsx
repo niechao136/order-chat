@@ -58,7 +58,7 @@ export function ChatSidebar({ graphs, owner, threads }: {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <Link href={`/${graph}`}>
+                <Link href={`/chat/${graph}`}>
                   <Plus />
                   <span>{'发起新对话'}</span>
                 </Link>
@@ -73,7 +73,7 @@ export function ChatSidebar({ graphs, owner, threads }: {
             {threads.map((thread) => (
               <SidebarMenuItem key={thread.thread_id}>
                 <SidebarMenuButton asChild>
-                  <Link href={`/${graph}/${thread.thread_id}`}>
+                  <Link href={`/chat/${graph}/${thread.thread_id}`}>
                     <span>{thread.summary}</span>
                   </Link>
                 </SidebarMenuButton>
