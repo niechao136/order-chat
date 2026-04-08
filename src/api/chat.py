@@ -167,7 +167,14 @@ async def get_chat_history(graph: str, thread_id: str):
                 content=msg.content
             ))
         elif isinstance(msg, AIMessage) and not msg.tool_calls:
-            content = msg.content[0].get("text", "")
+            if isinstance(msg.content, str):
+                content = msg.content
+            else:
+                first_item = msg.content[0] or ""
+                if isinstance(first_item, dict):
+                    content = first_item.get("text", "")
+                else:
+                    content = str(first_item)
             data.append(ChatMessage(
                 id=msg.id,
                 role="assistant",
