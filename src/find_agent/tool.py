@@ -17,8 +17,10 @@ async def search_product(query: str, top_k: int = 5, config: RunnableConfig = No
 
     参数:
     - query: 搜索关键词。
-    - top_k: 期望返回的结果数量。如果是查询特定商品，建议用 3-5；
-             如果是让“推荐一些”、“看看有哪些”，建议设置为 8-10。
+    - top_k: 【关键参数】请根据用户意图动态调整：
+        1. 如果用户询问特定的一两个商品，请设为 3。
+        2. 如果用户要求“多推荐几个”、“看看有哪些”或意图模糊，请务必设为 10。
+        3. 默认情况请设为 5。
     """
     configurable = config.get("configurable", {})
     collection_name = configurable.get("collection_name", "WayFind")
