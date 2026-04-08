@@ -4,7 +4,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 
 import { getChatHistory, getGraphList, getThreadList, sendMessage } from '@/services/chat';
 import { getOwnerInfo } from '@/services/user';
-import { ChatThread } from '@/types/chat';
+import { ChatThread, ChatMessage } from '@/types/chat';
 
 
 export function useFetch() {
@@ -23,6 +23,29 @@ export function useFetch() {
   return {
     fetchGraph
   };
+}
+
+export function useUpdate() {
+  const queryClient = useQueryClient();
+
+  const updateMsg = (chunk: string, graph: string, thread_id: string) => {
+    queryClient.setQueryData<ChatMessage[]>(
+      [ 'chat', 'history', graph, thread_id ],
+      (old) => {
+        if (!old) return old;
+        const newHistory = [ ...old ];
+        const lastMsg = newHistory[newHistory.length - 1];
+        if (lastMsg && lastMsg.role === 'assistant') {
+          lastMsg.content += chunk;
+        }
+        return newHistory;
+      }
+    );
+  }
+
+  return {
+    updateMsg
+  }
 }
 
 export function useGraph() {
@@ -59,28 +82,33 @@ export function useHistory(graph: string, thread_id: string) {
   });
 }
 
-export function useStartChat(graph: string) {
+export function useSendMsg(graph: string) {
   const queryClient = useQueryClient();
-  const queryKey = ['chat', 'threads', graph];
+  const threadsQueryKey = ['chat', 'threads', graph];
 
   return useMutation({
-    mutationFn: ({ thread_id, content, onChunk, onDone }: {
+    mutationFn: ({ thread_id, content, onChunk, onSuccess }: {
       thread_id: string;
       content: string;
       onChunk: (content: string, node?: string) => void;
-      onDone?: () => void;
+      onSuccess?: () => void;
+      onError?: () => void;
     }) =>
-      sendMessage(graph, thread_id, content, onChunk, onDone),
+      sendMessage(graph, thread_id, content, onChunk, onSuccess),
 
     onMutate: async ({ thread_id, content }) => {
-      // 1. 取消正在进行的列表请求
-      await queryClient.cancelQueries({ queryKey });
+      const historyQueryKey = ['chat', 'history', graph, thread_id];
+
+      // 1. 取消正在进行的请求（列表和历史）
+      await queryClient.cancelQueries({ queryKey: threadsQueryKey });
+      await queryClient.cancelQueries({ queryKey: historyQueryKey });
 
       // 2. 保存备份
-      const previousThreads = queryClient.getQueryData(queryKey);
+      const previousThreads = queryClient.getQueryData(threadsQueryKey);
+      const previousHistory = queryClient.getQueryData<ChatMessage[]>(historyQueryKey);
 
-      // 3. 执行乐观更新
-      queryClient.setQueryData<ChatThread[]>(queryKey, (old) => {
+      // 3. 乐观更新左侧列表
+      queryClient.setQueryData<ChatThread[]>(threadsQueryKey, (old) => {
         const oldList = Array.isArray(old) ? old : [];
 
         // 检查该 thread_id 是否已在列表中
@@ -106,13 +134,39 @@ export function useStartChat(graph: string) {
         }
       });
 
-      return { previousThreads };
+      // 4. 乐观更新消息历史
+      const userMsg: ChatMessage = {
+        id: `temp-user-${Date.now()}`,
+        role: 'user',
+        content: content,
+      };
+      const aiMsg: ChatMessage = {
+        id: `temp-ai-${Date.now()}`,
+        role: 'assistant',
+        content: '', // 初始为空，由 onChunk 更新
+      };
+      queryClient.setQueryData<ChatMessage[]>(historyQueryKey, (old) => {
+        return [...(old ?? []), userMsg, aiMsg];
+      });
+
+      return { previousThreads, previousHistory };
     },
     onError: (error, variables, context) => {
-      console.log(error, variables);
+      console.log(error);
+      const { thread_id, onError } = variables;
+
+      // 1. 回滚侧边栏
       if (context?.previousThreads) {
-        queryClient.setQueryData(queryKey, context.previousThreads);
+        queryClient.setQueryData(threadsQueryKey, context.previousThreads);
       }
+
+      // 2. 回滚历史记录
+      if (context?.previousHistory) {
+        queryClient.setQueryData(['chat', 'history', graph, thread_id], context.previousHistory);
+      }
+
+      // 3. 执行回调
+      onError?.();
     },
     onSuccess: async (data, variables) => {
       console.log(data);
@@ -124,7 +178,7 @@ export function useStartChat(graph: string) {
     },
     onSettled: async () => {
       // 无论成败都可以尝试刷新侧边栏，确保列表状态正确
-      await queryClient.invalidateQueries({ queryKey });
+      await queryClient.invalidateQueries({ queryKey: threadsQueryKey });
     },
   })
 }

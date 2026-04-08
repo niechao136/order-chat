@@ -2,14 +2,14 @@
 
 import { Send } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import { useParams } from 'next/navigation';
 
 import { MessageList } from '@/components/chat/message-list';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useStartChat, useHistory } from '@/hooks/use-query';
-import { ChatMessage } from '@/types/chat';
+import { useSendMsg, useHistory, useUpdate } from '@/hooks/use-query';
 
 
 export default function ThreadPage() {
@@ -19,12 +19,12 @@ export default function ThreadPage() {
   const thread_id = params.thread_id as string;
 
   const { data: history } = useHistory(graph, thread_id);
-  const { mutate: startChat } = useStartChat(graph);
+  const { mutate: sendMsg } = useSendMsg(graph);
+  const { updateMsg } = useUpdate();
 
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  const handleStartChat = async () => {
+  const handleSendMsg = async () => {
 
     if (!input.trim()) return;
 
@@ -32,22 +32,13 @@ export default function ThreadPage() {
 
     setInput('');
 
-    const userMsg: ChatMessage = { role: 'user', content, id: Date.now().toString() };
-    setMessages([userMsg]);
-
-    const aiMsgId = (Date.now() + 1).toString();
-    setMessages(prev => [...prev, { role: 'assistant', content: '', id: aiMsgId }]);
-
-    startChat({
+    sendMsg({
       thread_id,
       content,
-      onChunk: (chunk: string) => {
-        setMessages(prev => prev.map(msg =>
-          msg.id === aiMsgId ? { ...msg, content: msg.content + chunk } : msg
-        ));
-      },
-      onDone: () => {
-        setMessages([]);
+      onChunk: (chunk: string) => updateMsg(chunk, graph, thread_id),
+      onError: () => {
+        setInput(content);
+        toast.error("消息发送失败，请检查网络连接");
       },
     });
   };
@@ -55,7 +46,7 @@ export default function ThreadPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4">
       <MessageList
-        messages={[...(history ?? []), ...messages]}
+        messages={history ?? []}
       />
 
       <div className="max-w-3xl w-full sticky bottom-8">
@@ -69,7 +60,7 @@ export default function ThreadPage() {
             onKeyDown={async (e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                await handleStartChat();
+                await handleSendMsg();
               }
             }}
           />
@@ -78,7 +69,7 @@ export default function ThreadPage() {
               size="icon"
               className="rounded-xl h-10 w-10 shrink-0"
               disabled={!input.trim()}
-              onClick={handleStartChat}
+              onClick={handleSendMsg}
             >
               <Send className="w-4 h-4"/>
             </Button>

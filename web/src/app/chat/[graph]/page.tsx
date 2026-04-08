@@ -2,6 +2,7 @@
 
 import { Send, Sparkles } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { v7 } from 'uuid';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -9,8 +10,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { MessageList } from '@/components/chat/message-list';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useOwner, useStartChat } from '@/hooks/use-query';
-import { ChatMessage } from '@/types/chat';
+import { useOwner, useSendMsg, useUpdate, useHistory } from '@/hooks/use-query';
 
 export default function GraphPage() {
 
@@ -18,12 +18,13 @@ export default function GraphPage() {
   const graph = params.graph as string;
   const router = useRouter();
 
-  const { data: owner } = useOwner();
-  const { mutate: startChat } = useStartChat(graph);
-
   const [input, setInput] = useState('');
-  const [isSend, setIsSend] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [threadId, setThreadId] = useState<string | null>(null);
+
+  const { data: owner } = useOwner();
+  const { mutate: startChat } = useSendMsg(graph);
+  const { updateMsg } = useUpdate();
+  const { data: history } = useHistory(graph, threadId ?? '');
 
   const handleStartChat = async () => {
 
@@ -32,36 +33,31 @@ export default function GraphPage() {
     const thread_id = `user_${owner?.id}_${v7()}`;
     const content = input;
 
-    setIsSend(true);
     setInput('');
-
-    const userMsg: ChatMessage = { role: 'user', content, id: Date.now().toString() };
-    setMessages([userMsg]);
-
-    const aiMsgId = (Date.now() + 1).toString();
-    setMessages(prev => [...prev, { role: 'assistant', content: '', id: aiMsgId }]);
+    setThreadId(thread_id);
 
     startChat({
       thread_id,
       content,
-      onChunk: (chunk: string) => {
-        setMessages(prev => prev.map(msg =>
-          msg.id === aiMsgId ? { ...msg, content: msg.content + chunk } : msg
-        ));
+      onChunk: (chunk: string) => updateMsg(chunk, graph, thread_id),
+      onError: () => {
+        setInput(content);
+        setThreadId(null);
+        toast.error('消息发送失败，请检查网络连接');
       },
-      onDone: () => {
+      onSuccess: () => {
         // 流结束后跳转，此时侧边栏已经有了（乐观更新注入的），不会有空档期
         router.replace(`/chat/${graph}/${thread_id}`, { scroll: false });
-      },
+      }
     });
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4">
-      {isSend
+      {!!threadId
         ? (
           <MessageList
-            messages={messages}
+            messages={history ?? []}
           />
         )
         : (
