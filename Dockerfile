@@ -1,25 +1,36 @@
-# 使用高效的 python 镜像
+# 1. 使用 Python 镜像
 FROM python:3.11-slim-bookworm
 
+# 2. 设置环境变量，强制 uv 安装到固定位置
+ENV UV_INSTALL_DIR="/usr/local/bin"
+ENV PATH="/usr/local/bin:${PATH}"
+
+# 3. 安装必要工具
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-ADD https://astral.sh/uv/install.sh /install.sh
-RUN chmod +x /install.sh && /install.sh && rm /install.sh
-ENV PATH="/root/.cargo/bin:${PATH}"
+# 4. 通过脚本安装 uv，并直接重定向安装路径
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv* /usr/local/bin/
 
 WORKDIR /app
 
-# 1. 安装依赖 (利用缓存)
-COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-cache
+# 5. 复制依赖文件
+# 注意：如果本地没有 uv.lock，去掉 --frozen
+COPY pyproject.toml uv.lock* ./
 
-# 2. 复制源码
+# 6. 安装依赖 (创建虚拟环境)
+# --system 参数可以让 uv 直接把包装在容器的 Python 环境里，
+# 这样就不需要额外的虚拟环境层，容器更轻量
+RUN uv pip install --system --no-cache -r pyproject.toml || \
+    uv sync --system --no-cache
+
+# 7. 复制源码
 COPY src ./src
 COPY .env ./
 
-# 3. 运行
-# 使用 uv run 确保在虚拟环境中运行，或者直接调用 .venv 中的 uvicorn
-CMD ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 8. 启动命令
+# 既然用了 --system，直接调用 uvicorn 即可
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
