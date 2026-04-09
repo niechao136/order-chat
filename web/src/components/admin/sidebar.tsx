@@ -16,13 +16,13 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { NavUser } from '@/components/base/nav-user';
@@ -30,58 +30,52 @@ import { NavItem } from '@/types/ui';
 import { UserInfo } from '@/types/user';
 
 
-function NoChild({ nav }: {
-  nav: NavItem
-}) {
-  const { icon: Icon } = nav
+function NoChild({ nav }: { nav: NavItem }) {
+  const { icon: Icon } = nav;
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton asChild>
+        <SidebarMenuButton asChild tooltip={nav.title}>
           <Link href={nav.href ?? ''}>
-            {Icon && <Icon/>}
+            {Icon && <Icon className="size-4" />}
             <span>{nav.title}</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }
 
-function HasChild({ nav }: {
-  nav: NavItem
-}) {
-  const { icon: Icon } = nav
+function HasChild({ nav }: { nav: NavItem }) {
+  const { icon: Icon } = nav;
   return (
-    <Collapsible defaultOpen={false} className="group/collapsible">
-      <SidebarGroup>
-        <SidebarGroupLabel
-          asChild
-          className="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-          <CollapsibleTrigger>
-            {Icon && <Icon/>}
-            {nav.title}{' '}
-            <ChevronRightIcon className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90"/>
+    <SidebarMenu>
+      <Collapsible asChild defaultOpen={false} className="group/collapsible">
+        <SidebarMenuItem>
+          <CollapsibleTrigger asChild>
+            <SidebarMenuButton tooltip={nav.title}>
+              {Icon && <Icon className="size-4" />}
+              <span>{nav.title}</span>
+              <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            </SidebarMenuButton>
           </CollapsibleTrigger>
-        </SidebarGroupLabel>
-        <CollapsibleContent>
-          <SidebarGroupContent>
-            <SidebarMenu>
+          <CollapsibleContent>
+            <SidebarMenuSub>
               {(nav.children ?? []).map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                <SidebarMenuSubItem key={item.title}>
+                  <SidebarMenuSubButton asChild>
                     <Link href={item.href ?? ''}>
                       <span>{item.title}</span>
                     </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </CollapsibleContent>
-      </SidebarGroup>
-    </Collapsible>
-  )
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+    </SidebarMenu>
+  );
 }
 
 
