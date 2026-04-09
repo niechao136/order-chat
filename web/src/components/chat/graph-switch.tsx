@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react'
-import { ChevronsUpDown, VectorSquareIcon } from 'lucide-react'
+import { ChevronsUpDownIcon, VectorSquareIcon } from 'lucide-react'
+
+import { useRouter } from 'next/router'
 
 import {
   DropdownMenu,
@@ -9,17 +10,22 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuShortcut,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 
 
 export function GraphSwitch({ graphs, active }: {
   graphs: string[],
-  active: string
+  active: string,
 }) {
-  const { isMobile } = useSidebar()
-  const [ activeGraph, setActiveGraph ] = useState<string>(active)
+
+  const router = useRouter();
+  const { isMobile } = useSidebar();
+
+  const switchGraph = async (graph: string) => {
+    await router.push(`/chat/${graph}`)
+  }
 
   return (
     <SidebarMenu>
@@ -34,9 +40,9 @@ export function GraphSwitch({ graphs, active }: {
                 <VectorSquareIcon className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{activeGraph}</span>
+                <span className="truncate font-medium">{active}</span>
               </div>
-              <ChevronsUpDown className="ml-auto" />
+              <ChevronsUpDownIcon className="ml-auto" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
            <DropdownMenuContent
@@ -51,7 +57,7 @@ export function GraphSwitch({ graphs, active }: {
             {graphs.map((graph, index) => (
               <DropdownMenuItem
                 key={graph}
-                onClick={() => setActiveGraph(graph)}
+                onClick={() => switchGraph(graph)}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-md border">

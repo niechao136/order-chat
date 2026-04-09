@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
-import { useGraph } from '@/hooks/use-query';
+import { useGraph } from '@/hooks/use-chat';
 
 export default function ChatIndexPage() {
   const params = useParams();

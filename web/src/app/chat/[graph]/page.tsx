@@ -10,7 +10,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { MessageList } from '@/components/chat/message-list';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useOwner, useSendMsg, useUpdate, useHistory, TEMP_AI } from '@/hooks/use-query';
+import { useChatAction, useHistory, chatKeys } from '@/hooks/use-chat';
+import { useOwner } from '@/hooks/use-user';
 
 export default function GraphPage() {
 
@@ -24,8 +25,7 @@ export default function GraphPage() {
   const [isStreaming, setIsStreaming] = useState(false);
 
   const { data: owner } = useOwner();
-  const { mutate: startChat } = useSendMsg(graph);
-  const { updateMsg } = useUpdate();
+  const { sendMsg } = useChatAction(graph);
   const { data: history } = useHistory(graph, threadId ?? '');
 
   const displayMessages = useMemo(() => {
@@ -33,7 +33,7 @@ export default function GraphPage() {
     if (!isStreaming) return msgs;
 
     return msgs.map(o =>
-      o.id === TEMP_AI ? { ...o, content: streamingContent } : o
+      o.id === chatKeys.temp_ai ? { ...o, content: streamingContent } : o
     );
   }, [ history, isStreaming, streamingContent ]);
 
@@ -49,12 +49,11 @@ export default function GraphPage() {
     setStreamingContent('');
     setIsStreaming(true);
 
-    startChat({
+    sendMsg.mutate({
       thread_id,
       content,
       onChunk: (chunk: string) => {
         setStreamingContent(prev => prev + chunk);
-        updateMsg(chunk, graph, thread_id);
       },
       onError: () => {
         setInput(content);

@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { useGraph, useOwner, useThreads } from '@/hooks/use-query';
+import { useGraph, useThreads } from '@/hooks/use-chat';
+import { useOwner } from '@/hooks/use-user';
 
 export function ChatBody({ children }: {
   children: ReactNode;

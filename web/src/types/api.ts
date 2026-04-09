@@ -12,3 +12,14 @@ export interface DataResult<T = string> {
   msg?: string
   status: number
 }
+
+
+export interface PageParams {
+  page?: number
+  size?: number
+
+  order_by?: string
+  direction?: 'asc' | 'desc'
+
+  keyword?: string
+}

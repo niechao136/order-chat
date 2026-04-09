@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldLabel, FieldGroup, FieldSet, FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useFetch } from '@/hooks/use-query';
+import { useChatAction } from '@/hooks/use-chat';
 import { login } from '@/services/auth'
 
 // 定义表单校验规则
@@ -30,7 +30,7 @@ export default function LoginPage() {
     defaultValues: { username: '', password: '' }
   });
   const { formState: { isSubmitting } } = form;
-  const { fetchGraph } = useFetch()
+  const { fetchGraph } = useChatAction()
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const data = await login(JSON.stringify(values))
@@ -42,7 +42,7 @@ export default function LoginPage() {
 
     Cookies.set('token', data.access_token, { expires: 1, path: '/' });
 
-    const { graph } = await fetchGraph()
+    const graph = await fetchGraph()
 
     if (!graph?.[0]) {
       toast.error('目前没有可用的 Graph')

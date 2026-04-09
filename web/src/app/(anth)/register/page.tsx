@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldLabel, FieldGroup, FieldSet, FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useFetch } from '@/hooks/use-query';
+import { useChatAction } from '@/hooks/use-chat';
 import { register } from '@/services/auth';
 
 const formSchema = z.object({
@@ -50,7 +50,7 @@ export default function RegisterPage() {
     defaultValues: { username: '', password: '', reply_pwd: '' }
   });
   const { formState: { isSubmitting } } = form;
-  const { fetchGraph } = useFetch()
+  const { fetchGraph } = useChatAction()
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const req = {
@@ -68,7 +68,7 @@ export default function RegisterPage() {
 
     Cookies.set('token', data.access_token, { expires: 1, path: '/' });
 
-    const { graph } = await fetchGraph()
+    const graph = await fetchGraph()
 
     if (!graph[0]) {
       toast.error('目前没有可用的 Graph')

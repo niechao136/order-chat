@@ -9,7 +9,7 @@ import { useParams } from 'next/navigation';
 import { MessageList } from '@/components/chat/message-list';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useSendMsg, useHistory, useUpdate, TEMP_AI } from '@/hooks/use-query';
+import { useChatAction, useHistory, chatKeys } from '@/hooks/use-chat';
 
 
 export default function ThreadPage() {
@@ -19,8 +19,7 @@ export default function ThreadPage() {
   const thread_id = params.thread_id as string;
 
   const { data: history } = useHistory(graph, thread_id);
-  const { mutate: sendMsg } = useSendMsg(graph);
-  const { updateMsg } = useUpdate();
+  const { sendMsg } = useChatAction(graph);
 
   const [input, setInput] = useState('');
   const [streamingContent, setStreamingContent] = useState('');
@@ -31,7 +30,7 @@ export default function ThreadPage() {
     if (!isStreaming) return msgs;
 
     return msgs.map(o =>
-      o.id === TEMP_AI ? { ...o, content: streamingContent } : o
+      o.id === chatKeys.temp_ai ? { ...o, content: streamingContent } : o
     );
   }, [ history, isStreaming, streamingContent ]);
 
@@ -45,12 +44,11 @@ export default function ThreadPage() {
     setStreamingContent('');
     setIsStreaming(true);
 
-    sendMsg({
+    sendMsg.mutate({
       thread_id,
       content,
       onChunk: (chunk: string) => {
         setStreamingContent(prev => prev + chunk);
-        updateMsg(chunk, graph, thread_id);
       },
       onError: () => {
         setInput(content);
