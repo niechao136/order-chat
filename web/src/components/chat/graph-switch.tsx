@@ -2,7 +2,7 @@
 
 import { ChevronsUpDownIcon, VectorSquareIcon } from 'lucide-react'
 
-import { useRouter } from 'next/router'
+import { useRouter } from 'next/navigation'
 
 import {
   DropdownMenu,
@@ -23,8 +23,8 @@ export function GraphSwitch({ graphs, active }: {
   const router = useRouter();
   const { isMobile } = useSidebar();
 
-  const switchGraph = async (graph: string) => {
-    await router.push(`/chat/${graph}`)
+  const switchGraph = (graph: string) => {
+    router.push(`/chat/${graph}`)
   }
 
   return (
