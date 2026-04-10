@@ -6,15 +6,17 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { useRecordActions } from '@/hooks/use-dataset';
+import { RequiredPageParams } from '@/types/api';
 
 
-export function UploadItem({ collection }: {
+export function UploadItem({ collection, params }: {
   collection: string
+  params: RequiredPageParams
 }) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { upload } = useRecordActions(collection);
+  const { upload } = useRecordActions(collection, params);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

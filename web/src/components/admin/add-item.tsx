@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from '@/components/ui/label';
 import { useRecordActions } from '@/hooks/use-dataset';
 import { cn } from '@/lib/utils';
+import { RequiredPageParams } from '@/types/api';
 
 
 // 定义表单校验逻辑
@@ -33,11 +34,12 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function AddItemDialog({ collection }: {
+export function AddItemDialog({ collection, params }: {
   collection: string
+  params: RequiredPageParams
 }) {
 
-  const { add } = useRecordActions(collection);
+  const { add } = useRecordActions(collection, params);
 
   const [ open, setOpen ] = useState(false);
 

@@ -19,8 +19,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from '@/components/ui/label';
+
 import { useRecordActions } from '@/hooks/use-dataset';
 import { cn } from '@/lib/utils';
+import { RequiredPageParams } from '@/types/api';
 import { RecordInfo } from '@/types/dataset';
 
 
@@ -35,12 +37,13 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function EditItemDialog({ collection, item }: {
+export function EditItemDialog({ collection, item, params }: {
   collection: string
   item: RecordInfo
+  params: RequiredPageParams
 }) {
 
-  const { update } = useRecordActions(collection);
+  const { update } = useRecordActions(collection, params);
 
   const [ open, setOpen ] = useState(false);
 

@@ -17,13 +17,15 @@ import {
 import { Button } from '@/components/ui/button';
 
 import { useRecordActions } from '@/hooks/use-dataset';
+import { RequiredPageParams } from '@/types/api';
 
 
-export function ClearDatasetDialog({ collection }: {
+export function ClearDatasetDialog({ collection, params }: {
   collection: string
+  params: RequiredPageParams
 }) {
 
-  const { clear } = useRecordActions(collection);
+  const { clear } = useRecordActions(collection, params);
 
   const clearDataset = () => {
     clear.mutate(undefined, {

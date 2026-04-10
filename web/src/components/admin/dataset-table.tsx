@@ -1,7 +1,7 @@
 'use client';
 
 import { DatabaseIcon, Trash2Icon } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -43,6 +43,19 @@ export function DatasetTable({ collection }: {
   const { data, isLoading } = useRecordList(collection, pageParams);
   const { batchRemove } = useRecordActions(collection, pageParams);
 
+  useEffect(() => {
+    const total = data?.total ?? 0;
+    const size = pageParams.size;
+    const totalPages = Math.ceil(total / size) || 1;
+
+    setPageParams(prev => {
+      if (prev.page > totalPages) {
+        return { ...prev, page: totalPages };
+      }
+      return prev; // 不更新，避免不必要的重渲染
+    });
+  }, [ data?.total, pageParams.size ]);
+
   return (
     <>
       <Card className="flex-1 flex flex-col shadow-sm overflow-hidden">
@@ -52,9 +65,9 @@ export function DatasetTable({ collection }: {
             <CardDescription>管理当前知识库中的 {data?.total || 0} 条向量数据</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <AddItemDialog collection={collection}/>
-            <UploadItem collection={collection}/>
-            <ClearDatasetDialog collection={collection}/>
+            <AddItemDialog collection={collection} params={pageParams}/>
+            <UploadItem collection={collection} params={pageParams}/>
+            <ClearDatasetDialog collection={collection} params={pageParams}/>
           </div>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
@@ -107,11 +120,11 @@ export function DatasetTable({ collection }: {
                           {/* 1. 查看详情 */}
                           <ViewItemDialog content={record.payload.content}/>
 
-                          {/* 2. 修改记录 */}
-                          <EditItemDialog collection={collection} item={record}/>
+                          {/* 2. 修改向量 */}
+                          <EditItemDialog collection={collection} item={record} params={pageParams}/>
 
-                          {/* 3. 删除记录 */}
-                          <DeleteItemDialog collection={collection} item={record}/>
+                          {/* 3. 删除向量 */}
+                          <DeleteItemDialog collection={collection} item={record} params={pageParams}/>
                         </div>
                       </TableCell>
                     </TableRow>

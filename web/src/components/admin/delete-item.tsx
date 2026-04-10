@@ -17,15 +17,17 @@ import {
 import { Button } from '@/components/ui/button';
 
 import { useRecordActions } from '@/hooks/use-dataset';
+import { RequiredPageParams } from '@/types/api';
 import { RecordInfo } from '@/types/dataset';
 
 
-export function DeleteItemDialog({ collection, item }: {
+export function DeleteItemDialog({ collection, item, params }: {
   collection: string
   item: RecordInfo
+  params: RequiredPageParams
 }) {
 
-  const { remove } = useRecordActions(collection);
+  const { remove } = useRecordActions(collection, params);
 
   const delItem = () => {
     remove.mutate(item.id, {
