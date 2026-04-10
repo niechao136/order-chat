@@ -25,6 +25,7 @@ import { useColAction } from '@/hooks/use-dataset';
 const formSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, '名称不能为空')
     .max(50, '名称过长')
     .regex(/^[a-zA-Z0-9_-]+$/, '仅支持字母、数字、下划线和连字符'),

@@ -26,11 +26,13 @@ import { DialogProps } from '@/types/ui';
 const formSchema = z.object({
   password: z
     .string()
+    .trim()
     .min(6, { message: '密码至少 6 个字符' })
     .regex(/[a-zA-Z]/, { message: '密码需包含至少一个字母' })
     .regex(/[0-9]/, { message: '密码需包含至少一个数字' }),
   reply_pwd: z
     .string()
+    .trim()
     .min(6, { message: '密码至少 6 个字符' }),
 }).refine((data) => data.password === data.reply_pwd, {
   message: "两次输入的密码不一致",

@@ -20,6 +20,7 @@ import { register } from '@/services/auth';
 const formSchema = z.object({
   username: z
     .string()
+    .trim()
     .min(2, { message: '用户名至少 2 个字符' })
     .max(20, { message: '用户名最多 20 个字符' }),
   // 邮箱非必填：允许为空字符串或 undefined，但如果填了，必须是邮箱格式
@@ -32,11 +33,13 @@ const formSchema = z.object({
     .optional(),
   password: z
     .string()
+    .trim()
     .min(6, { message: '密码至少 6 个字符' })
     .regex(/[a-zA-Z]/, { message: '密码需包含至少一个字母' })
     .regex(/[0-9]/, { message: '密码需包含至少一个数字' }),
   reply_pwd: z
     .string()
+    .trim()
     .min(6, { message: '密码至少 6 个字符' }),
 }).refine((data) => data.password === data.reply_pwd, {
   message: "两次输入的密码不一致",

@@ -26,8 +26,9 @@ import { RecordInfo } from '@/types/dataset';
 
 // 定义表单校验逻辑
 const formSchema = z.object({
-  content: z
+  text: z
     .string()
+    .trim()
     .min(1, '内容不能为空'),
 });
 
@@ -49,7 +50,7 @@ export function EditItemDialog({ collection, item }: {
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { content: item.payload.content },
+    defaultValues: { text: item.payload.content },
   });
 
   const onSubmit = async (data: FormValues) => {
@@ -85,20 +86,20 @@ export function EditItemDialog({ collection, item }: {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="content">向量内容</Label>
+            <Label htmlFor="text">向量内容</Label>
             <Textarea
-              id="content"
+              id="text"
               placeholder="请输入"
-              {...register('content')}
+              {...register('text')}
               className={cn(
                 'min-h-[300px] leading-relaxed',
-                errors.content && 'border-destructive'
+                errors.text && 'border-destructive'
               )}
               autoComplete="off"
             />
-            {errors.content && (
+            {errors.text && (
               <p className="text-xs text-destructive font-medium">
-                {errors.content.message}
+                {errors.text.message}
               </p>
             )}
           </div>
