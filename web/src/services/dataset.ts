@@ -49,7 +49,7 @@ export async function getRecordList(name: string, params?: PageParams) {
 }
 
 export async function addRecord(name: string, body: string) {
-  const res = await apiRequest(`dataset/${name}`, {
+  const res = await apiRequest(`dataset/${name}/item`, {
     method: 'POST',
     body,
   })
