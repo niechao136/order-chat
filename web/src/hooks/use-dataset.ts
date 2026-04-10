@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { toast } from 'sonner';
 
 import {
   getColList,
@@ -17,6 +16,7 @@ import {
   batchDeleteRecord,
   clearCol,
   getRecordInfo,
+  uploadRecord,
 } from '@/services/dataset';
 import { PageParams } from '@/types/api';
 
@@ -124,9 +124,12 @@ export function useRecordActions(colName: string, params?: PageParams) {
   // 1. 新增
   const add = useMutation({
     mutationFn: (body: string) => addRecord(colName, body),
-    onSuccess: async () => {
-      await refreshLists();
-      toast.success('添加成功');
+    onSuccess: async (res) => {
+      if (res.status === 1) {
+        await refreshLists();
+      } else {
+        throw new Error(res?.msg)
+      }
     },
   });
 
@@ -134,36 +137,59 @@ export function useRecordActions(colName: string, params?: PageParams) {
   const update = useMutation({
     mutationFn: ({ id, body }: { id: string; body: string }) =>
       updateRecord(colName, id, body),
-    onSuccess: async () => {
-      await refreshLists();
-      toast.success('更新成功');
+    onSuccess: async (res) => {
+      if (res.status === 1) {
+        await refreshLists();
+      } else {
+        throw new Error(res?.msg)
+      }
     },
   });
 
   // 3. 删除/批量删除
   const remove = useMutation({
     mutationFn: (id: string) => deleteRecord(colName, id),
-    onSuccess: async () => {
-      await refreshLists();
-      toast.success('删除成功');
+    onSuccess: async (res) => {
+      if (res.status === 1) {
+        await refreshLists();
+      } else {
+        throw new Error(res?.msg)
+      }
     },
   });
 
   const batchRemove = useMutation({
     mutationFn: (ids: string[]) => batchDeleteRecord(colName, JSON.stringify({ ids })),
-    onSuccess: async () => {
-      await refreshLists();
-      toast.success('批量删除成功');
+    onSuccess: async (res) => {
+      if (res.status === 1) {
+        await refreshLists();
+      } else {
+        throw new Error(res?.msg)
+      }
     },
   });
 
   // 4. 清空集合
   const clear = useMutation({
     mutationFn: () => clearCol(colName),
-    onSuccess: async () => {
-      await refreshLists();
-      toast.success('集合已清空');
+    onSuccess: async (res) => {
+      if (res.status === 1) {
+        await refreshLists();
+      } else {
+        throw new Error(res?.msg)
+      }
     },
+  });
+
+  const upload = useMutation({
+    mutationFn: (body: FormData) => uploadRecord(colName, body),
+    onSuccess: async (res) => {
+      if (res.status === 1) {
+        await refreshLists();
+      } else {
+        throw new Error(res?.msg)
+      }
+    }
   });
 
   const search = useMutation({
@@ -179,6 +205,7 @@ export function useRecordActions(colName: string, params?: PageParams) {
     remove,
     batchRemove,
     clear,
+    upload,
     search,
   };
 }

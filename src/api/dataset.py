@@ -66,14 +66,35 @@ async def delete_collection(name: str, client: AsyncQdrantClient = Depends(get_q
 
 @dataset_router.get("/{name}/item", response_model=PageResult[Record])
 async def item_list(name: str, params: PageParams = Depends(), client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
-    records, next_page_offset = await client.scroll(
-        collection_name=name,
-        limit=params.size,
-        offset=params.offset,
-        with_payload=True
-    )
     info = await client.count(collection_name=name)
     total = info.count
+
+    if total == 0:
+        return PageResult(total=0, data=[], page=params.page, size=params.size)
+
+    target_index = (params.page - 1) * params.size
+    qdrant_offset = None
+
+    if target_index > 0:
+        # 只拉取 ID 列表，不拉取 payload，速度极快
+        # limit 设置为 target_index，拿到目标页之前的最后一个 ID
+        ids_only, _ = await client.scroll(
+            collection_name=name,
+            limit=target_index,
+            with_payload=False,
+            with_vectors=False
+        )
+
+        if ids_only:
+            # 获取最后一条记录的 ID 作为下一页的起点
+            qdrant_offset = ids_only[-1].id
+
+    records, _ = await client.scroll(
+        collection_name=name,
+        limit=params.size,
+        offset=qdrant_offset,
+        with_payload=True
+    )
     return PageResult(
         total=total,
         data=records,
