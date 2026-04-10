@@ -6,3 +6,9 @@ export interface NavItem {
   children?: NavItem[]
   icon?: LucideIcon
 }
+
+
+export interface DialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}

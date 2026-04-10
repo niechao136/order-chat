@@ -56,24 +56,20 @@ export function useColAction() {
     mutationFn: addCol,
     onSuccess: async (res) => {
       if (res.status === 1) {
-        // 成功后使列表失效，触发自动重新获取
         await queryClient.invalidateQueries({ queryKey: datasetKeys.lists() });
-        toast.success('集合创建成功');
       } else {
-        toast.error(res.msg || '创建失败');
+        throw new Error(res?.msg)
       }
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteCol,
-    onSuccess: async (res, name) => {
+    onSuccess: async (res) => {
       if (res.status === 1) {
-        // 使列表失效
         await queryClient.invalidateQueries({ queryKey: datasetKeys.lists() });
-        // 同时移除对应的详情缓存，防止用户导航回已删除的页面
-        queryClient.removeQueries({ queryKey: datasetKeys.detail(name) });
-        toast.success('集合已删除');
+      } else {
+        throw new Error(res?.msg)
       }
     },
   });

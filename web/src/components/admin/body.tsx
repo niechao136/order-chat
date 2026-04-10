@@ -5,7 +5,7 @@ import {
   LayoutDashboardIcon,
   UserRoundIcon,
 } from 'lucide-react';
-import { useMemo, ReactNode } from 'react';
+import { useMemo, ReactNode, Fragment } from 'react';
 
 import { useParams, usePathname } from 'next/navigation';
 
@@ -115,12 +115,12 @@ export function AdminBody({ children }: {
             <Breadcrumb>
               <BreadcrumbList>
                 {title.map((text, index) => (
-                  <>
+                  <Fragment key={text}>
                     {index > 0 && <BreadcrumbSeparator/>}
                     <BreadcrumbItem key={text}>
                       <BreadcrumbPage>{text}</BreadcrumbPage>
                     </BreadcrumbItem>
-                  </>
+                  </Fragment>
                 ))}
               </BreadcrumbList>
             </Breadcrumb>

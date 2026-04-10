@@ -101,11 +101,12 @@ export function AdminSidebar({ owner, nav }: {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        {nav.map(item => {
+        {nav.map((item, index) => {
+          const itemKey = item.href || item.title || index;
           return Array.isArray(item.children) ? (
-            <HasChild nav={item}/>
+            <HasChild key={itemKey} nav={item}/>
           ) : (
-            <NoChild nav={item}/>
+            <NoChild key={itemKey} nav={item}/>
           )
         })}
       </SidebarContent>

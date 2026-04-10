@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUserAction } from '@/hooks/use-user';
 import { handleLogout } from '@/services/api';
+import { DialogProps } from '@/types/ui';
 
 
 const formSchema = z.object({
@@ -36,12 +37,10 @@ const formSchema = z.object({
   path: ["reply_pwd"], // 错误信息会绑定在 reply_pwd 字段上
 });
 
-interface ChangePasswordDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+type FormValues = z.infer<typeof formSchema>;
 
-export function ChangePassword({ open, onOpenChange }: ChangePasswordDialogProps) {
+
+export function ChangePassword({ open, onOpenChange }: DialogProps) {
 
   const { changeMe } = useUserAction()
   const { isPending, mutate } = changeMe
@@ -55,7 +54,7 @@ export function ChangePassword({ open, onOpenChange }: ChangePasswordDialogProps
     if (!open) reset();
   }, [open, reset]);
 
-  const onSubmit = async ({ password }: z.infer<typeof formSchema>) => {
+  const onSubmit = async ({ password }: FormValues) => {
     mutate({ password }, {
       onSuccess: () => {
         toast.success('密码修改成功，请重新登录');
