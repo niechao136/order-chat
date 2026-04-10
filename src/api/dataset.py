@@ -111,7 +111,7 @@ async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(
     await client.upsert(collection_name=name, points=[
         models.PointStruct(id=uu_id, vector=vector, payload={"content": req.text})
     ])
-    return DataResult(status=1, msg=None, data=uu_id)
+    return DataResult(status=1, msg=None, data=str(uu_id))
 
 
 @dataset_router.post("/{name}/item/upload", response_model=DataResult[List[str]])
@@ -164,7 +164,7 @@ async def update_item(name: str, item_id: str, req: ItemUpdate, client: AsyncQdr
     await client.upsert(collection_name=name, points=[
         models.PointStruct(id=uu_id, vector=vector, payload={"content": req.text})
     ])
-    return DataResult(status=1, msg=None, data=uu_id)
+    return DataResult(status=1, msg=None, data=str(uu_id))
 
 
 @dataset_router.get("/{name}/item/{item_id}", response_model=DataResult[Record])
