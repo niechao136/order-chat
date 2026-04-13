@@ -41,7 +41,7 @@ export function DatasetTable({ collection }: {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const { data, isLoading } = useRecordList(collection, pageParams);
-  const { batchRemove } = useRecordActions(collection, pageParams);
+  const { remove } = useRecordActions(collection, pageParams);
 
   return (
     <>
@@ -136,7 +136,7 @@ export function DatasetTable({ collection }: {
             onClick={() => setSelectedIds([])}>
             取消
           </Button>
-          <Button size="sm" variant="destructive" className="h-8" onClick={() => batchRemove.mutate(selectedIds, { onSuccess: () => setSelectedIds([]) })}>
+          <Button size="sm" variant="destructive" className="h-8" onClick={() => remove.mutate(selectedIds, { onSuccess: () => setSelectedIds([]) })}>
             <Trash2Icon className="mr-2 h-3.5 w-3.5" /> 批量删除
           </Button>
         </div>

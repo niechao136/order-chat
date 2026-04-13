@@ -28,10 +28,14 @@ export async function apiRequest(url: string, options: RequestInit = {}) {
   const baseUrl = getBaseUrl();
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
 
-  const defaultHeaders = {
+  const defaultHeaders: HeadersInit = {
     'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
   };
+
+  const isFormData = options.body instanceof FormData;
+  if (!isFormData) {
+    defaultHeaders['Content-Type'] = 'application/json';
+  }
 
   const response = await fetch(`${baseUrl}${cleanUrl}`, {
     ...options,

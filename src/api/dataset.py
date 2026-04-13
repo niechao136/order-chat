@@ -175,12 +175,6 @@ async def get_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(
     return DataResult(status=1, data=res[0], msg=None)
 
 
-@dataset_router.delete("/{name}/item/{item_id}", response_model=DataResult[str])
-async def delete_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
-    await client.delete(collection_name=name, points_selector=[item_id], wait=True)
-    return DataResult(status=1, msg=None, data=None)
-
-
 @dataset_router.delete("/{name}/item/delete", response_model=DataResult[str])
 async def batch_delete_item(name: str, req: ItemDelete, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     await client.delete(collection_name=name, points_selector=req.ids, wait=True)

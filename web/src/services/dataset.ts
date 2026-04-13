@@ -81,15 +81,7 @@ export async function getRecordInfo(name: string, id: string) {
   return data
 }
 
-export async function deleteRecord(name: string, id: string) {
-  const res = await apiRequest(`dataset/${name}/item/${id}`, {
-    method: 'DELETE',
-  })
-  const data: DataResult = await res.json()
-  return data
-}
-
-export async function batchDeleteRecord(name: string, body: string) {
+export async function deleteRecord(name: string, body: string) {
   const res = await apiRequest(`dataset/${name}/item/delete`, {
     method: 'DELETE',
     body,

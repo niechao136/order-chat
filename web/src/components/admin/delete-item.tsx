@@ -30,7 +30,7 @@ export function DeleteItemDialog({ collection, item, params }: {
   const { remove } = useRecordActions(collection, params);
 
   const delItem = () => {
-    remove.mutate(item.id, {
+    remove.mutate([item.id], {
       onSuccess: () => {
         toast.success(`删除成功`);
       },

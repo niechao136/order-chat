@@ -13,7 +13,6 @@ import {
   addRecord,
   updateRecord,
   deleteRecord,
-  batchDeleteRecord,
   clearCol,
   getRecordInfo,
   uploadRecord,
@@ -148,18 +147,7 @@ export function useRecordActions(colName: string, params?: PageParams) {
 
   // 3. 删除/批量删除
   const remove = useMutation({
-    mutationFn: (id: string) => deleteRecord(colName, id),
-    onSuccess: async (res) => {
-      if (res.status === 1) {
-        await refreshLists();
-      } else {
-        throw new Error(res?.msg)
-      }
-    },
-  });
-
-  const batchRemove = useMutation({
-    mutationFn: (ids: string[]) => batchDeleteRecord(colName, JSON.stringify({ ids })),
+    mutationFn: (ids: string[]) => deleteRecord(colName, JSON.stringify({ ids })),
     onSuccess: async (res) => {
       if (res.status === 1) {
         await refreshLists();
@@ -203,7 +191,6 @@ export function useRecordActions(colName: string, params?: PageParams) {
     add,
     update,
     remove,
-    batchRemove,
     clear,
     upload,
     search,
