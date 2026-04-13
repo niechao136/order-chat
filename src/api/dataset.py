@@ -77,10 +77,10 @@ async def item_list(name: str, params: PageParams = Depends(), client: AsyncQdra
 
     if target_index > 0:
         # 只拉取 ID 列表，不拉取 payload，速度极快
-        # limit 设置为 target_index，拿到目标页之前的最后一个 ID
+        # limit 设置为 target_index + 1，拿到目标页第一个 ID
         ids_only, _ = await client.scroll(
             collection_name=name,
-            limit=target_index,
+            limit=target_index + 1,
             with_payload=False,
             with_vectors=False
         )
