@@ -12,10 +12,7 @@ from qdrant_client.models import (
     CollectionInfo,
     ScoredPoint,
     Record,
-    PointStruct,
-    OrderBy,
-    Direction,
-    PayloadSchemaType
+    PointStruct
 )
 
 from src.dataset.embedding import get_embedding_async, get_embeddings_async_batch
@@ -47,12 +44,6 @@ async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends
         return DataResult(status=0, msg="Dataset add failed", data=None)
 
     info = await client.get_collection(req.name)
-    if "updated_at" not in info.payload_schema:
-        await client.create_payload_index(
-            collection_name=req.name,
-            field_name="updated_at",
-            field_type=PayloadSchemaType.FLOAT
-        )
 
     return DataResult(status=1, msg=None, data=info)
 
@@ -94,7 +85,6 @@ async def item_list(
 
     target_index = (params.page - 1) * params.size
     qdrant_offset = None
-    order_by = OrderBy(key="updated_at", direction=Direction.DESC)
 
     if target_index > 0:
         # 只拉取 ID 列表，不拉取 payload，速度极快
@@ -102,7 +92,6 @@ async def item_list(
         ids_only, _ = await client.scroll(
             collection_name=name,
             limit=target_index + 1,
-            order_by=order_by,
             with_payload=False,
             with_vectors=False
         )
@@ -115,8 +104,8 @@ async def item_list(
         collection_name=name,
         limit=params.size,
         offset=qdrant_offset,
-        order_by=order_by,
-        with_payload=True
+        with_payload=True,
+        with_vectors=False
     )
     return PageResult(
         total=total,
@@ -130,7 +119,7 @@ async def item_list(
 async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     vector = await get_embedding_async(text=req.text)
     key = hashlib.md5(req.text.encode()).hexdigest()
-    uu_id = uuid.UUID(key)
+    uu_id = uuid.UUID(str(time.time() * 1000) + key)
     payload = {
         "content": req.text,
         "updated_at": time.time() * 1000
@@ -162,10 +151,10 @@ async def upload_item(
         new_ids = []
         for i, text in enumerate(texts):
             key = hashlib.md5(text.encode()).hexdigest()
-            uu_id = str(uuid.UUID(key))
+            uu_id = uuid.UUID(str(time.time() * 1000) + key)
             payload = {
                 "content": text,
-                "updated_at": time.time() * 1000 + i
+                "updated_at": time.time() * 1000
             }
 
             points.append(PointStruct(id=uu_id, vector=vectors[i], payload=payload))
@@ -191,7 +180,7 @@ async def update_item(
 ):
     vector = await get_embedding_async(text=req.text)
     key = hashlib.md5(req.text.encode()).hexdigest()
-    uu_id = uuid.UUID(key)
+    uu_id = uuid.UUID(str(time.time() * 1000) + key)
     payload = {
         "content": req.text,
         "updated_at": time.time() * 1000
