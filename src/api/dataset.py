@@ -1,6 +1,4 @@
-import hashlib
 import time
-import uuid
 import re
 from typing import List, Any, cast
 
@@ -20,6 +18,7 @@ from src.dataset.qdrant import get_qdrant_client_async
 from src.schemas.dataset import CollectionAdd, ItemSearch, ItemAdd, ItemUpdate, ItemDelete
 from src.schemas.page import NoPageResult, DataResult, PageResult, PageParams
 from src.utils.jwt import get_current_admin
+from src.utils.uuid import generate_timestamp_uuid
 
 dataset_router = APIRouter(prefix="/dataset", tags=["Dataset"], dependencies=[Depends(get_current_admin)])
 
@@ -118,11 +117,11 @@ async def item_list(
 @dataset_router.post("/{name}/item", response_model=DataResult[str])
 async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     vector = await get_embedding_async(text=req.text)
-    key = hashlib.md5(req.text.encode()).hexdigest()
-    uu_id = uuid.UUID(str(time.time() * 1000) + key)
+    ms_timestamp = int(time.time() * 1000)
+    uu_id = generate_timestamp_uuid(ms_timestamp)
     payload = {
         "content": req.text,
-        "updated_at": time.time() * 1000
+        "updated_at": ms_timestamp
     }
     await client.upsert(collection_name=name, points=[
         models.PointStruct(id=uu_id, vector=vector, payload=payload)
@@ -149,12 +148,12 @@ async def upload_item(
 
         points = []
         new_ids = []
+        ms_timestamp = int(time.time() * 1000)
         for i, text in enumerate(texts):
-            key = hashlib.md5(text.encode()).hexdigest()
-            uu_id = uuid.UUID(str(time.time() * 1000) + key)
+            uu_id = generate_timestamp_uuid(ms_timestamp + i)
             payload = {
                 "content": text,
-                "updated_at": time.time() * 1000
+                "updated_at": ms_timestamp + i
             }
 
             points.append(PointStruct(id=uu_id, vector=vectors[i], payload=payload))
@@ -179,11 +178,11 @@ async def update_item(
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     vector = await get_embedding_async(text=req.text)
-    key = hashlib.md5(req.text.encode()).hexdigest()
-    uu_id = uuid.UUID(str(time.time() * 1000) + key)
+    ms_timestamp = int(time.time() * 1000)
+    uu_id = generate_timestamp_uuid(ms_timestamp)
     payload = {
         "content": req.text,
-        "updated_at": time.time() * 1000
+        "updated_at": ms_timestamp
     }
 
     if str(uu_id) != item_id:
