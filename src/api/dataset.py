@@ -47,6 +47,13 @@ async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends
         return DataResult(status=0, msg="Dataset add failed", data=None)
 
     info = await client.get_collection(req.name)
+    if "updated_at" not in info.payload_schema:
+        await client.create_payload_index(
+            collection_name=req.name,
+            field_name="updated_at",
+            field_type=PayloadFieldSchema.INTEGER
+        )
+
     return DataResult(status=1, msg=None, data=info)
 
 
@@ -131,15 +138,6 @@ async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(
     await client.upsert(collection_name=name, points=[
         models.PointStruct(id=uu_id, vector=vector, payload=payload)
     ])
-
-    info = await client.get_collection(collection_name=name)
-    if "updated_at" not in info.payload_schema:
-        await client.create_payload_index(
-            collection_name=name,
-            field_name="updated_at",
-            field_type=PayloadFieldSchema.INTEGER
-        )
-
     return DataResult(status=1, msg=None, data=str(uu_id))
 
 
@@ -179,15 +177,6 @@ async def upload_item(
             wait=True,
             batch_size=64
         )
-
-        info = await client.get_collection(collection_name=name)
-        if "updated_at" not in info.payload_schema:
-            await client.create_payload_index(
-                collection_name=name,
-                field_name="updated_at",
-                field_type=PayloadFieldSchema.INTEGER
-            )
-
         return DataResult(status=1, msg=None, data=new_ids)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
