@@ -1,7 +1,7 @@
 'use client';
 
 import { DatabaseIcon, Trash2Icon } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -42,19 +42,6 @@ export function DatasetTable({ collection }: {
 
   const { data, isLoading } = useRecordList(collection, pageParams);
   const { batchRemove } = useRecordActions(collection, pageParams);
-
-  useEffect(() => {
-    const total = data?.total ?? 0;
-    const size = pageParams.size;
-    const totalPages = Math.ceil(total / size) || 1;
-
-    setPageParams(prev => {
-      if (prev.page > totalPages) {
-        return { ...prev, page: totalPages };
-      }
-      return prev; // 不更新，避免不必要的重渲染
-    });
-  }, [ data?.total, pageParams.size ]);
 
   return (
     <>
