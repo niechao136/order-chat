@@ -15,7 +15,7 @@ from qdrant_client.models import (
     PointStruct,
     OrderBy,
     Direction,
-    PayloadFieldSchema
+    PayloadSchemaType
 )
 
 from src.dataset.embedding import get_embedding_async, get_embeddings_async_batch
@@ -51,7 +51,7 @@ async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends
         await client.create_payload_index(
             collection_name=req.name,
             field_name="updated_at",
-            field_type=PayloadFieldSchema.INTEGER
+            field_type=PayloadSchemaType.INTEGER
         )
 
     return DataResult(status=1, msg=None, data=info)
