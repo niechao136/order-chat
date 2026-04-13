@@ -157,7 +157,7 @@ async def upload_item(
             }
 
             points.append(PointStruct(id=uu_id, vector=vectors[i], payload=payload))
-            new_ids.append(uu_id)
+            new_ids.append(str(uu_id))
 
         client.upload_points(
             collection_name=name,
