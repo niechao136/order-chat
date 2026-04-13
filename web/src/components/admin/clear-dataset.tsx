@@ -17,19 +17,23 @@ import {
 import { Button } from '@/components/ui/button';
 
 import { useRecordActions } from '@/hooks/use-dataset';
-import { RequiredPageParams } from '@/types/api';
+import { usePagingStore } from '@/stores/paging';
 
 
-export function ClearDatasetDialog({ collection, params }: {
+export function ClearDatasetDialog({ collection }: {
   collection: string
-  params: RequiredPageParams
 }) {
 
-  const { clear } = useRecordActions(collection, params);
+  const pagingKey = `dataset_${collection}`;
+
+  const { setPage } = usePagingStore();
+
+  const { clear } = useRecordActions(collection);
 
   const clearDataset = () => {
     clear.mutate(undefined, {
       onSuccess: () => {
+        setPage(pagingKey, 1);
         toast.success(`知识库 ${collection} 清空成功`);
       },
       onError: (err: Error) => {

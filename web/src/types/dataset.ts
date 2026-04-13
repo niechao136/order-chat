@@ -14,6 +14,7 @@ export interface ColInfo {
 
 export interface PayloadInfo {
   content: string
+  updated_at: number
 }
 
 export interface RecordInfo {

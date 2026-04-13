@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from '@/components/ui/label';
 import { useRecordActions } from '@/hooks/use-dataset';
 import { cn } from '@/lib/utils';
-import { RequiredPageParams } from '@/types/api';
+import { usePagingStore } from '@/stores/paging';
 
 
 // 定义表单校验逻辑
@@ -34,12 +34,15 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function AddItemDialog({ collection, params }: {
+export function AddItemDialog({ collection }: {
   collection: string
-  params: RequiredPageParams
 }) {
 
-  const { add } = useRecordActions(collection, params);
+  const pagingKey = `dataset_${collection}`;
+
+  const { setPage } = usePagingStore();
+
+  const { add } = useRecordActions(collection);
 
   const [ open, setOpen ] = useState(false);
 
@@ -61,6 +64,7 @@ export function AddItemDialog({ collection, params }: {
     // 调用 Mutation
     add.mutate(JSON.stringify(data), {
       onSuccess: () => {
+        setPage(pagingKey, 1);
         toast.success(`向量创建成功`);
         setOpen(false);
       },

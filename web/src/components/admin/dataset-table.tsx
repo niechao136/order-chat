@@ -1,7 +1,7 @@
 'use client';
 
 import { DatabaseIcon, Trash2Icon } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -30,18 +30,36 @@ import { ViewItemDialog } from '@/components/admin/view-item';
 import { TablePaging } from '@/components/base/pagination';
 
 import { useRecordList, useRecordActions } from '@/hooks/use-dataset';
-import { RequiredPageParams } from '@/types/api';
+import { usePagingStore } from '@/stores/paging';
+import { formatTime } from '@/utils/time';
 
 
 export function DatasetTable({ collection }: {
   collection: string
 }) {
 
-  const [pageParams, setPageParams] = useState<RequiredPageParams>({ page: 1, size: 10 });
+  const pagingKey = `dataset_${collection}`;
+  const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
+  const { setSize, setPage } = usePagingStore();
+
+  const params = useMemo(() => ({
+    page,
+    size,
+  }), [page, size])
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const { data, isLoading } = useRecordList(collection, pageParams);
-  const { remove } = useRecordActions(collection, pageParams);
+  const { data, isLoading } = useRecordList(collection, params);
+  const { remove } = useRecordActions(collection);
+
+  useEffect(() => {
+    const total = data?.total ?? 0;
+    const totalPages = Math.ceil(total / size) || 1;
+
+    if (page > totalPages) {
+      setPage(pagingKey, totalPages);
+    }
+  }, [data?.total, size, page, pagingKey, setPage]);
 
   return (
     <>
@@ -52,9 +70,9 @@ export function DatasetTable({ collection }: {
             <CardDescription>管理当前知识库中的 {data?.total || 0} 条向量数据</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <AddItemDialog collection={collection} params={pageParams}/>
-            <UploadItem collection={collection} params={pageParams}/>
-            <ClearDatasetDialog collection={collection} params={pageParams}/>
+            <AddItemDialog collection={collection} />
+            <UploadItem collection={collection} />
+            <ClearDatasetDialog collection={collection} />
           </div>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
@@ -70,6 +88,7 @@ export function DatasetTable({ collection }: {
                   </TableHead>
                   <TableHead className="w-[280px]">ID</TableHead>
                   <TableHead>内容预览</TableHead>
+                  <TableHead className="w-[160px]">更新时间</TableHead>
                   <TableHead className="w-[140px] text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -102,16 +121,17 @@ export function DatasetTable({ collection }: {
                           </p>
                         </div>
                       </TableCell>
+                      <TableCell className="py-4">{formatTime(record.payload.updated_at)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {/* 1. 查看详情 */}
                           <ViewItemDialog content={record.payload.content}/>
 
                           {/* 2. 修改向量 */}
-                          <EditItemDialog collection={collection} item={record} params={pageParams}/>
+                          <EditItemDialog collection={collection} item={record} />
 
                           {/* 3. 删除向量 */}
-                          <DeleteItemDialog collection={collection} item={record} params={pageParams}/>
+                          <DeleteItemDialog collection={collection} item={record} />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -121,7 +141,13 @@ export function DatasetTable({ collection }: {
             </Table>
           </div>
 
-          <TablePaging total={data?.total ?? 0} page={pageParams} setPage={setPageParams}/>
+          <TablePaging
+            total={data?.total ?? 0}
+            page={page}
+            setPage={(page) => setPage(pagingKey, page)}
+            size={size}
+            setSize={(size) => setSize(pagingKey, size)}
+          />
         </CardContent>
       </Card>
       {/* 批量操作（仅在选中时浮现） */}

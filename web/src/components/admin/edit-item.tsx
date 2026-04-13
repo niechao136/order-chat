@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 
 import { useRecordActions } from '@/hooks/use-dataset';
 import { cn } from '@/lib/utils';
-import { RequiredPageParams } from '@/types/api';
+import { usePagingStore } from '@/stores/paging';
 import { RecordInfo } from '@/types/dataset';
 
 
@@ -37,13 +37,16 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function EditItemDialog({ collection, item, params }: {
+export function EditItemDialog({ collection, item }: {
   collection: string
   item: RecordInfo
-  params: RequiredPageParams
 }) {
 
-  const { update } = useRecordActions(collection, params);
+  const pagingKey = `dataset_${collection}`;
+
+  const { setPage } = usePagingStore();
+
+  const { update } = useRecordActions(collection);
 
   const [ open, setOpen ] = useState(false);
 
@@ -62,6 +65,7 @@ export function EditItemDialog({ collection, item, params }: {
     const body = JSON.stringify(data);
     update.mutate({ id, body }, {
       onSuccess: () => {
+        setPage(pagingKey, 1);
         toast.success(`向量修改成功`);
         setOpen(false);
       },

@@ -19,32 +19,33 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 
-import { RequiredPageParams } from '@/types/api';
 
 interface PagingProp {
-  total: number | null;
-  page: RequiredPageParams;
-  setPage: (page: RequiredPageParams) => void;
+  total: number;
+  page: number;
+  size: number;
+  setPage: (page: number) => void;
+  setSize: (size: number) => void;
 }
 
-export function TablePaging({ page, setPage, total }: PagingProp) {
+export function TablePaging({ page, setPage, size, setSize, total }: PagingProp) {
   // 内部状态用于管理跳转输入框的值
   const [jumpPage, setJumpPage] = useState('');
 
   const totalPage = useMemo(() => {
     if (!total) return 1;
-    return Math.ceil(total / page.size);
-  }, [total, page.size]);
+    return Math.ceil(total / size);
+  }, [total, size]);
 
   // 当外部页码改变时，同步清空或更新跳转输入框（可选）
   useEffect(() => {
     setJumpPage('');
-  }, [page.page]);
+  }, [page]);
 
   const handleJump = () => {
     const target = parseInt(jumpPage);
     if (!isNaN(target) && target >= 1 && target <= totalPage) {
-      setPage({ ...page, page: target });
+      setPage(target);
     } else {
       setJumpPage(''); // 输入非法则清空
     }
@@ -52,24 +53,23 @@ export function TablePaging({ page, setPage, total }: PagingProp) {
 
   const renderPages = () => {
     const pages = [];
-    const { page: current } = page;
     for (let i = 1; i <= totalPage; i++) {
-      if (i === 1 || i === totalPage || (i >= current - 1 && i <= current + 1)) {
+      if (i === 1 || i === totalPage || (i >= page - 1 && i <= page + 1)) {
         pages.push(
           <PaginationItem key={i}>
             <PaginationLink
               href="#"
-              isActive={current === i}
+              isActive={page === i}
               onClick={(e) => {
                 e.preventDefault();
-                setPage({ ...page, page: i });
+                setPage(i);
               }}
             >
               {i}
             </PaginationLink>
           </PaginationItem>
         );
-      } else if (i === current - 2 || i === current + 2) {
+      } else if (i === page - 2 || i === page + 2) {
         pages.push(
           <PaginationItem key={`ellipsis-${i}`}>
             <PaginationEllipsis />
@@ -85,7 +85,7 @@ export function TablePaging({ page, setPage, total }: PagingProp) {
       {/* 左侧：总量 */}
       <div className="flex items-center gap-6">
         <p className="text-xs text-muted-foreground font-mono shrink-0">
-          Total: {total || 0}
+          Total: {total}
         </p>
       </div>
 
@@ -98,10 +98,10 @@ export function TablePaging({ page, setPage, total }: PagingProp) {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  if (page.page > 1) setPage({ ...page, page: page.page - 1 });
+                  if (page > 1) setPage(page - 1);
                 }}
-                aria-disabled={page.page <= 1}
-                className={page.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                aria-disabled={page <= 1}
+                className={page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
               />
             </PaginationItem>
 
@@ -112,10 +112,10 @@ export function TablePaging({ page, setPage, total }: PagingProp) {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  if (page.page < totalPage) setPage({ ...page, page: page.page + 1 });
+                  if (page < totalPage) setPage(page + 1);
                 }}
-                aria-disabled={page.page >= totalPage}
-                className={page.page >= totalPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                aria-disabled={page >= totalPage}
+                className={page >= totalPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
               />
             </PaginationItem>
           </PaginationContent>
@@ -138,9 +138,9 @@ export function TablePaging({ page, setPage, total }: PagingProp) {
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground shrink-0">每页显示</span>
           <Select
-            value={page.size.toString()}
+            value={size.toString()}
             onValueChange={(value) => {
-              setPage({ ...page, size: parseInt(value), page: 1 });
+              setSize(parseInt(value));
             }}
           >
             <SelectTrigger className="h-8 w-[70px] text-xs">

@@ -112,12 +112,12 @@ export function useRecordInfo(name: string, id: string) {
   });
 }
 
-export function useRecordActions(colName: string, params?: PageParams) {
+export function useRecordActions(colName: string) {
   const queryClient = useQueryClient();
 
   // 通用的刷新函数：刷新该集合下的所有列表（分页、搜索等）
   const refreshLists = async () => {
-    await queryClient.invalidateQueries({ queryKey: datasetKeys.recordList(colName, params) });
+    await queryClient.invalidateQueries({ queryKey: datasetKeys.recordLists(colName) });
   };
 
   // 1. 新增

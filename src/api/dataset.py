@@ -1,4 +1,5 @@
 import hashlib
+import time
 import uuid
 import re
 from typing import List, Any, cast
@@ -6,14 +7,22 @@ from typing import List, Any, cast
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http import models
-from qdrant_client.models import CollectionDescription, CollectionInfo, ScoredPoint, Record, PointStruct
+from qdrant_client.models import (
+    CollectionDescription,
+    CollectionInfo,
+    ScoredPoint,
+    Record,
+    PointStruct,
+    OrderBy,
+    Direction,
+    PayloadFieldSchema
+)
 
 from src.dataset.embedding import get_embedding_async, get_embeddings_async_batch
 from src.dataset.qdrant import get_qdrant_client_async
 from src.schemas.dataset import CollectionAdd, ItemSearch, ItemAdd, ItemUpdate, ItemDelete
 from src.schemas.page import NoPageResult, DataResult, PageResult, PageParams
 from src.utils.jwt import get_current_admin
-
 
 dataset_router = APIRouter(prefix="/dataset", tags=["Dataset"], dependencies=[Depends(get_current_admin)])
 
@@ -65,7 +74,11 @@ async def delete_collection(name: str, client: AsyncQdrantClient = Depends(get_q
 
 
 @dataset_router.get("/{name}/item", response_model=PageResult[Record])
-async def item_list(name: str, params: PageParams = Depends(), client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+async def item_list(
+        name: str,
+        params: PageParams = Depends(),
+        client: AsyncQdrantClient = Depends(get_qdrant_client_async)
+):
     info = await client.count(collection_name=name)
     total = info.count
 
@@ -74,6 +87,7 @@ async def item_list(name: str, params: PageParams = Depends(), client: AsyncQdra
 
     target_index = (params.page - 1) * params.size
     qdrant_offset = None
+    order_by = OrderBy(key="updated_at", direction=Direction.DESC)
 
     if target_index > 0:
         # 只拉取 ID 列表，不拉取 payload，速度极快
@@ -81,6 +95,7 @@ async def item_list(name: str, params: PageParams = Depends(), client: AsyncQdra
         ids_only, _ = await client.scroll(
             collection_name=name,
             limit=target_index + 1,
+            order_by=order_by,
             with_payload=False,
             with_vectors=False
         )
@@ -93,6 +108,7 @@ async def item_list(name: str, params: PageParams = Depends(), client: AsyncQdra
         collection_name=name,
         limit=params.size,
         offset=qdrant_offset,
+        order_by=order_by,
         with_payload=True
     )
     return PageResult(
@@ -108,14 +124,31 @@ async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(
     vector = await get_embedding_async(text=req.text)
     key = hashlib.md5(req.text.encode()).hexdigest()
     uu_id = uuid.UUID(key)
+    payload = {
+        "content": req.text,
+        "updated_at": time.time() * 1000
+    }
     await client.upsert(collection_name=name, points=[
-        models.PointStruct(id=uu_id, vector=vector, payload={"content": req.text})
+        models.PointStruct(id=uu_id, vector=vector, payload=payload)
     ])
+
+    info = await client.get_collection(collection_name=name)
+    if "updated_at" not in info.payload_schema:
+        await client.create_payload_index(
+            collection_name=name,
+            field_name="updated_at",
+            field_type=PayloadFieldSchema.INTEGER
+        )
+
     return DataResult(status=1, msg=None, data=str(uu_id))
 
 
 @dataset_router.post("/{name}/item/upload", response_model=DataResult[List[str]])
-async def upload_item(name: str, file: UploadFile = File(...), client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+async def upload_item(
+        name: str,
+        file: UploadFile = File(...),
+        client: AsyncQdrantClient = Depends(get_qdrant_client_async)
+):
     try:
         content = await file.read()
         full_text = content.decode("utf-8")
@@ -132,14 +165,12 @@ async def upload_item(name: str, file: UploadFile = File(...), client: AsyncQdra
         for i, text in enumerate(texts):
             key = hashlib.md5(text.encode()).hexdigest()
             uu_id = str(uuid.UUID(key))
+            payload = {
+                "content": text,
+                "updated_at": time.time() * 1000 + i
+            }
 
-            points.append(
-                PointStruct(
-                    id=uu_id,
-                    vector=vectors[i],
-                    payload={"content": text}
-                )
-            )
+            points.append(PointStruct(id=uu_id, vector=vectors[i], payload=payload))
             new_ids.append(uu_id)
 
         client.upload_points(
@@ -149,20 +180,39 @@ async def upload_item(name: str, file: UploadFile = File(...), client: AsyncQdra
             batch_size=64
         )
 
+        info = await client.get_collection(collection_name=name)
+        if "updated_at" not in info.payload_schema:
+            await client.create_payload_index(
+                collection_name=name,
+                field_name="updated_at",
+                field_type=PayloadFieldSchema.INTEGER
+            )
+
         return DataResult(status=1, msg=None, data=new_ids)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
 
 
 @dataset_router.put("/{name}/item/{item_id}", response_model=DataResult[str])
-async def update_item(name: str, item_id: str, req: ItemUpdate, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+async def update_item(
+        name: str,
+        item_id: str,
+        req: ItemUpdate,
+        client: AsyncQdrantClient = Depends(get_qdrant_client_async)
+):
     vector = await get_embedding_async(text=req.text)
     key = hashlib.md5(req.text.encode()).hexdigest()
     uu_id = uuid.UUID(key)
+    payload = {
+        "content": req.text,
+        "updated_at": time.time() * 1000
+    }
+
     if str(uu_id) != item_id:
         await client.delete(collection_name=name, points_selector=[item_id], wait=False)
+
     await client.upsert(collection_name=name, points=[
-        models.PointStruct(id=uu_id, vector=vector, payload={"content": req.text})
+        models.PointStruct(id=uu_id, vector=vector, payload=payload)
     ])
     return DataResult(status=1, msg=None, data=str(uu_id))
 
@@ -170,8 +220,10 @@ async def update_item(name: str, item_id: str, req: ItemUpdate, client: AsyncQdr
 @dataset_router.get("/{name}/item/{item_id}", response_model=DataResult[Record])
 async def get_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     res = await client.retrieve(collection_name=name, ids=[item_id])
+
     if not res:
         return DataResult(status=0, msg="Item not found", data=None)
+
     return DataResult(status=1, data=res[0], msg=None)
 
 
@@ -185,7 +237,7 @@ async def batch_delete_item(name: str, req: ItemDelete, client: AsyncQdrantClien
 async def clear_items(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     await client.delete(
         collection_name=name,
-        points_selector=models.Filter(must=[]) # 匹配所有
+        points_selector=models.Filter(must=[])  # 匹配所有
     )
     return DataResult(status=1, msg=None, data=None)
 
