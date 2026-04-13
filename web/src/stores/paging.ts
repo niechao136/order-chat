@@ -27,14 +27,14 @@ export const usePagingStore = create<PagingStore>()(
     getPaging: (key) => {
       const { paging } = getState();
       if (!paging[key]) {
+        const newItem = { ...initialItem };
         setState((state) => ({
           paging: {
             ...state.paging,
-            [key]: {
-              ...initialItem,
-            },
+            [key]: newItem,
           },
-        }))
+        }));
+        return newItem;
       }
       return paging[key]
     },

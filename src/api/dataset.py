@@ -51,7 +51,7 @@ async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends
         await client.create_payload_index(
             collection_name=req.name,
             field_name="updated_at",
-            field_type=PayloadSchemaType.INTEGER
+            field_type=PayloadSchemaType.FLOAT
         )
 
     return DataResult(status=1, msg=None, data=info)
