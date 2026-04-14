@@ -29,6 +29,7 @@ export function useOwner() {
   return useQuery({
     queryKey: userKeys.owner(),
     queryFn: () => getOwnerInfo().then(res => res.data),
+    staleTime: 1000 * 60 * 10
   });
 }
 
@@ -37,8 +38,7 @@ export function useUserList(params?: PageParams) {
 
   const query = useQuery({
     queryKey: userKeys.list(params),
-    queryFn: () => getUserList(params),
-    placeholderData: (previousData) => previousData
+    queryFn: () => getUserList(params)
   })
 
   useEffect(() => {

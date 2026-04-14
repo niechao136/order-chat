@@ -22,6 +22,7 @@ export function useGraph() {
   return useQuery({
     queryKey: chatKeys.graph(),
     queryFn: () => getGraphList().then(res => res),
+    staleTime: 1000 * 60 * 10
   });
 }
 
@@ -29,7 +30,7 @@ export function useThreads(graph: string, graphs: string[]) {
   return useQuery({
     queryKey: chatKeys.thread(graph),
     queryFn: () => getThreadList(graph).then(res => res.data),
-    enabled: graphs.includes(graph),
+    enabled: graphs.includes(graph)
   });
 }
 
@@ -41,7 +42,7 @@ export function useHistory(graph: string, thread_id: string) {
     // 只有当两个参数都存在时才允许执行
     enabled: !!graph && !!thread_id,
     // 可选：如果希望进入页面时数据是最新的，可以设置
-    staleTime: 1000 * 60 // 1分钟内认为数据是新鲜的
+    staleTime: 1000 * 30 // 30秒内认为数据是新鲜的
   });
 }
 

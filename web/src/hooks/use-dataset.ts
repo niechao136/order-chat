@@ -37,7 +37,8 @@ export const datasetKeys = {
 export function useColList() {
   return useQuery({
     queryKey: datasetKeys.lists(),
-    queryFn: () => getColList().then(res => res.data)
+    queryFn: () => getColList().then(res => res.data),
+    staleTime: 1000 * 60 * 10,
   });
 }
 
@@ -46,6 +47,7 @@ export function useColInfo(name: string) {
     queryKey: datasetKeys.detail(name),
     queryFn: () => getColInfo(name).then(res => res.data),
     enabled: !!name, // 只有当 name 存在时才发起请求
+    staleTime: 1000 * 60 * 10,
   });
 }
 
@@ -124,7 +126,7 @@ export function useRecordActions(colName: string) {
 
   // 新增/修改/批量生成后跳转到最后一页，看到最新的数据
   const jumpToLast = async () => {
-    queryClient.removeQueries({
+    await queryClient.invalidateQueries({
       queryKey: datasetKeys.recordLists(colName),
       exact: false
     });
@@ -136,7 +138,7 @@ export function useRecordActions(colName: string) {
 
   // 删除/批量删除/清空后检查当前页码是否大于总页码
   const checkPage = async () => {
-    queryClient.removeQueries({
+    await queryClient.invalidateQueries({
       queryKey: datasetKeys.recordLists(colName),
       exact: false
     });

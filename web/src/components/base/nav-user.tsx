@@ -88,7 +88,7 @@ export function NavUser({ mode, owner }: {
                   <DropdownMenuGroup>
                     {/* 使用 asChild 避免嵌套多层 div，并确保水平布局 */}
                     <DropdownMenuItem asChild>
-                      <Link href="/overview" className="flex w-full items-center gap-2">
+                      <Link href="/dataset" className="flex w-full items-center gap-2">
                         <BoltIcon className="size-4"/>
                         <span>管理中心</span>
                       </Link>

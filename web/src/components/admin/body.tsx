@@ -2,7 +2,6 @@
 
 import {
   DatabaseSearchIcon,
-  LayoutDashboardIcon,
   UserRoundIcon,
 } from 'lucide-react';
 import { useMemo, ReactNode, Fragment } from 'react';
@@ -42,11 +41,6 @@ export function AdminBody({ children }: {
       } as NavItem
     })
     const list: NavItem[] = [
-      {
-        href: '/overview',
-        title: '总览',
-        icon: LayoutDashboardIcon,
-      },
       {
         title: '知识库管理',
         icon: DatabaseSearchIcon,

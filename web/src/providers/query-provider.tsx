@@ -10,7 +10,7 @@ export function QueryProvider({ children }: {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 1000 * 60 * 5, // 数据 5 分钟内被认为是“新鲜”的，不会重复请求
+        staleTime: 1000 * 60 * 2, // 默认 2 分钟失效
       },
     },
   }));

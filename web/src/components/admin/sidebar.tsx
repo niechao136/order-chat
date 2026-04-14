@@ -50,7 +50,7 @@ function HasChild({ nav }: { nav: NavItem }) {
   const { icon: Icon } = nav;
   return (
     <SidebarMenu>
-      <Collapsible asChild defaultOpen={false} className="group/collapsible">
+      <Collapsible asChild defaultOpen={true} className="group/collapsible">
         <SidebarMenuItem>
           <CollapsibleTrigger asChild>
             <SidebarMenuButton tooltip={nav.title}>
@@ -89,7 +89,7 @@ export function AdminSidebar({ owner, nav }: {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuButton size={'lg'} asChild>
-            <Link href={'/overview'}>
+            <Link href={'/dataset'}>
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 <GalleryVerticalEndIcon className="size-4" />
               </div>
