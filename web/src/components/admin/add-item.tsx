@@ -28,14 +28,16 @@ import { usePagingStore } from '@/stores/paging';
 const formSchema = z.object({
   text: z
     .string()
+    .trim()
     .min(1, '内容不能为空'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function AddItemDialog({ collection }: {
+export function AddItemDialog({ collection, totalPage }: {
   collection: string
+  totalPage: number
 }) {
 
   const pagingKey = `dataset_${collection}`;
@@ -64,7 +66,7 @@ export function AddItemDialog({ collection }: {
     // 调用 Mutation
     add.mutate(JSON.stringify(data), {
       onSuccess: () => {
-        setPage(pagingKey, 1);
+        setPage(pagingKey, totalPage);
         toast.success(`向量创建成功`);
         setOpen(false);
       },

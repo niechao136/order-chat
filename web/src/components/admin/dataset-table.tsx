@@ -52,14 +52,16 @@ export function DatasetTable({ collection }: {
   const { data, isLoading } = useRecordList(collection, params);
   const { remove } = useRecordActions(collection);
 
-  useEffect(() => {
-    const total = data?.total ?? 0;
-    const totalPages = Math.ceil(total / size) || 1;
+  const totalPage = (() => {
+    if (!data?.total) return 1;
+    return Math.ceil(data.total / size);
+  })();
 
-    if (page > totalPages) {
-      setPage(pagingKey, totalPages);
+  useEffect(() => {
+    if (page > totalPage) {
+      setPage(pagingKey, totalPage);
     }
-  }, [data?.total, size, page, pagingKey, setPage]);
+  }, [totalPage, page, pagingKey, setPage]);
 
   return (
     <>
@@ -70,7 +72,7 @@ export function DatasetTable({ collection }: {
             <CardDescription>管理当前知识库中的 {data?.total || 0} 条向量数据</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <AddItemDialog collection={collection} />
+            <AddItemDialog collection={collection} totalPage={totalPage} />
             <UploadItem collection={collection} />
             <ClearDatasetDialog collection={collection} />
           </div>
@@ -86,9 +88,8 @@ export function DatasetTable({ collection }: {
                       onCheckedChange={() => setSelectedIds(selectedIds.length === data?.data.length ? [] : data?.data.map(r => r.id) ?? [])}
                     />
                   </TableHead>
-                  <TableHead className="w-[280px]">ID</TableHead>
                   <TableHead>内容预览</TableHead>
-                  <TableHead className="w-[160px]">更新时间</TableHead>
+                  <TableHead className="w-[140px]">更新时间</TableHead>
                   <TableHead className="w-[140px] text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -113,7 +114,6 @@ export function DatasetTable({ collection }: {
                           onCheckedChange={() => setSelectedIds(prev => prev.includes(record.id) ? prev.filter(i => i !== record.id) : [ ...prev, record.id ])}
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-[12px] text-muted-foreground">{record.id}</TableCell>
                       <TableCell className="py-4">
                         <div className="w-full">
                           <p className="text-sm leading-relaxed text-foreground line-clamp-2 break-all">
@@ -128,7 +128,7 @@ export function DatasetTable({ collection }: {
                           <ViewItemDialog content={record.payload.content}/>
 
                           {/* 2. 修改向量 */}
-                          <EditItemDialog collection={collection} item={record} />
+                          <EditItemDialog collection={collection} item={record} totalPage={totalPage} />
 
                           {/* 3. 删除向量 */}
                           <DeleteItemDialog collection={collection} item={record} />

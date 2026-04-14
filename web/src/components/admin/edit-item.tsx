@@ -37,9 +37,10 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function EditItemDialog({ collection, item }: {
+export function EditItemDialog({ collection, item, totalPage }: {
   collection: string
   item: RecordInfo
+  totalPage: number
 }) {
 
   const pagingKey = `dataset_${collection}`;
@@ -65,7 +66,7 @@ export function EditItemDialog({ collection, item }: {
     const body = JSON.stringify(data);
     update.mutate({ id, body }, {
       onSuccess: () => {
-        setPage(pagingKey, 1);
+        setPage(pagingKey, totalPage);
         toast.success(`向量修改成功`);
         setOpen(false);
       },
