@@ -37,8 +37,7 @@ export const datasetKeys = {
 export function useColList() {
   return useQuery({
     queryKey: datasetKeys.lists(),
-    queryFn: () => getColList().then(res => res.data),
-    staleTime: 1000 * 60 * 5, // 管理后台数据相对稳定，可以设置较长过期时间
+    queryFn: () => getColList().then(res => res.data)
   });
 }
 
@@ -93,7 +92,7 @@ export function useRecordList(name: string, params?: PageParams) {
   const query = useQuery({
     queryKey: datasetKeys.recordList(name, params),
     queryFn: () => getRecordList(name, params),
-    placeholderData: (previousData) => previousData, // 翻页时保留旧数据，避免白屏
+    enabled: !!name
   });
 
   useEffect(() => {
