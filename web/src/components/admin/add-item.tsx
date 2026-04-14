@@ -38,7 +38,7 @@ export function AddItemDialog({ collection }: {
   collection: string
 }) {
 
-  const { add } = useRecordActions(collection);
+  const { add, jumpToLast } = useRecordActions(collection);
 
   const [ open, setOpen ] = useState(false);
 
@@ -60,6 +60,7 @@ export function AddItemDialog({ collection }: {
     // 调用 Mutation
     add.mutate(JSON.stringify(data), {
       onSuccess: async () => {
+        await jumpToLast();
         toast.success(`向量创建成功`);
         setOpen(false);
       },

@@ -35,7 +35,8 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function AddDatasetDialog() {
 
-  const { addCol, isAdding } = useColAction();
+  const { add, refresh } = useColAction();
+
   const [ open, setOpen ] = useState(false);
 
   const {
@@ -54,8 +55,9 @@ export function AddDatasetDialog() {
 
   const onSubmit = async (data: FormValues) => {
     // 调用 Mutation
-    addCol(JSON.stringify(data), {
-      onSuccess: () => {
+    add.mutate(JSON.stringify(data), {
+      onSuccess: async () => {
+        await refresh(data.name);
         toast.success(`知识库 ${data.name} 创建成功`);
         setOpen(false);
       },
@@ -110,8 +112,8 @@ export function AddDatasetDialog() {
             >
               取消
             </Button>
-            <Button type="submit" disabled={isAdding}>
-              {isAdding && (
+            <Button type="submit" disabled={add.isPending}>
+              {add.isPending && (
                 <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
               )}
               立即创建

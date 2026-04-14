@@ -51,11 +51,12 @@ export function DatasetTable({ collection }: {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const { data, isLoading } = useRecordList(collection, params);
-  const { remove } = useRecordActions(collection);
+  const { remove, checkPage } = useRecordActions(collection);
 
   const batchDel = () => {
     remove.mutate(selectedIds, {
       onSuccess: async () => {
+        await checkPage();
         toast.success(`批量删除成功`);
         setSelectedIds([]);
       },

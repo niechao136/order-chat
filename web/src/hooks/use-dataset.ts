@@ -53,37 +53,36 @@ export function useColInfo(name: string) {
 export function useColAction() {
   const queryClient = useQueryClient();
 
-  const addMutation = useMutation({
+  const refresh = async (name: string) => {
+    await queryClient.invalidateQueries({ queryKey: datasetKeys.lists() });
+    await queryClient.invalidateQueries({
+      queryKey: datasetKeys.recordLists(name),
+      exact: false
+    });
+  }
+
+  const add = useMutation({
     mutationFn: addCol,
     onSuccess: async (res) => {
-      if (res.status === 1) {
-        await queryClient.invalidateQueries({ queryKey: datasetKeys.lists() });
-      } else {
+      if (res.status !== 1) {
         throw new Error(res?.msg);
       }
     },
   });
 
-  const deleteMutation = useMutation({
+  const remove = useMutation({
     mutationFn: deleteCol,
-    onSuccess: async (res, name) => {
-      if (res.status === 1) {
-        await queryClient.invalidateQueries({ queryKey: datasetKeys.lists() });
-        queryClient.removeQueries({
-          queryKey: datasetKeys.recordLists(name),
-          exact: false,
-        });
-      } else {
+    onSuccess: async (res) => {
+      if (res.status !== 1) {
         throw new Error(res?.msg);
       }
     },
   });
 
   return {
-    addCol: addMutation.mutate,
-    isAdding: addMutation.isPending,
-    deleteCol: deleteMutation.mutate,
-    isDeleting: deleteMutation.isPending,
+    add,
+    remove,
+    refresh,
   };
 }
 
@@ -124,6 +123,7 @@ export function useRecordActions(colName: string) {
   const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
   const { setPage } = usePagingStore();
 
+  // 新增/修改/批量生成后跳转到最后一页，看到最新的数据
   const jumpToLast = async () => {
     queryClient.removeQueries({
       queryKey: datasetKeys.recordLists(colName),
@@ -134,6 +134,8 @@ export function useRecordActions(colName: string) {
     const totalPage = Math.ceil(total / size) || 1;
     setPage(pagingKey, totalPage);
   };
+
+  // 删除/批量删除/清空后检查当前页码是否大于总页码
   const checkPage = async () => {
     queryClient.removeQueries({
       queryKey: datasetKeys.recordLists(colName),
@@ -151,9 +153,7 @@ export function useRecordActions(colName: string) {
   const add = useMutation({
     mutationFn: (body: string) => addRecord(colName, body),
     onSuccess: async (res) => {
-      if (res.status === 1) {
-        await jumpToLast();
-      } else {
+      if (res.status !== 1) {
         throw new Error(res?.msg);
       }
     },
@@ -164,9 +164,7 @@ export function useRecordActions(colName: string) {
     mutationFn: ({ id, body }: { id: string; body: string }) =>
       updateRecord(colName, id, body),
     onSuccess: async (res) => {
-      if (res.status === 1) {
-        await jumpToLast();
-      } else {
+      if (res.status !== 1) {
         throw new Error(res?.msg);
       }
     },
@@ -176,9 +174,7 @@ export function useRecordActions(colName: string) {
   const remove = useMutation({
     mutationFn: (ids: string[]) => deleteRecord(colName, JSON.stringify({ ids })),
     onSuccess: async (res) => {
-      if (res.status === 1) {
-        await checkPage();
-      } else {
+      if (res.status !== 1) {
         throw new Error(res?.msg);
       }
     },
@@ -188,9 +184,7 @@ export function useRecordActions(colName: string) {
   const clear = useMutation({
     mutationFn: () => clearCol(colName),
     onSuccess: async (res) => {
-      if (res.status === 1) {
-        await checkPage();
-      } else {
+      if (res.status !== 1) {
         throw new Error(res?.msg);
       }
     },
@@ -200,10 +194,8 @@ export function useRecordActions(colName: string) {
   const upload = useMutation({
     mutationFn: (body: FormData) => uploadRecord(colName, body),
     onSuccess: async (res) => {
-      if (res.status === 1) {
-        await jumpToLast();
-      } else {
-        throw new Error(res?.msg)
+      if (res.status !== 1) {
+        throw new Error(res?.msg);
       }
     }
   });
@@ -223,5 +215,7 @@ export function useRecordActions(colName: string) {
     clear,
     upload,
     search,
+    jumpToLast,
+    checkPage,
   };
 }

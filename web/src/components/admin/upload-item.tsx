@@ -14,7 +14,7 @@ export function UploadItem({ collection }: {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { upload } = useRecordActions(collection);
+  const { upload, jumpToLast } = useRecordActions(collection);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -22,7 +22,8 @@ export function UploadItem({ collection }: {
     const formData = new FormData();
     formData.append('file', file);
     upload.mutate(formData, {
-      onSuccess: () => {
+      onSuccess: async () => {
+        await jumpToLast();
         toast.success("上传成功");
         if (fileInputRef.current) fileInputRef.current.value = '';
       }

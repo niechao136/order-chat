@@ -41,7 +41,7 @@ export function EditItemDialog({ collection, item }: {
   item: RecordInfo
 }) {
 
-  const { update } = useRecordActions(collection);
+  const { update, jumpToLast } = useRecordActions(collection);
 
   const [ open, setOpen ] = useState(false);
 
@@ -60,6 +60,7 @@ export function EditItemDialog({ collection, item }: {
     const body = JSON.stringify(data);
     update.mutate({ id, body }, {
       onSuccess: async () => {
+        await jumpToLast();
         toast.success(`向量修改成功`);
         setOpen(false);
       },

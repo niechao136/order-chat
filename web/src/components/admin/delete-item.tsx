@@ -1,6 +1,7 @@
 'use client';
 
 import { Trash2Icon } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -25,12 +26,16 @@ export function DeleteItemDialog({ collection, item }: {
   item: RecordInfo
 }) {
 
-  const { remove } = useRecordActions(collection);
+  const { remove, checkPage } = useRecordActions(collection);
+
+  const [ open, setOpen ] = useState(false);
 
   const delItem = () => {
     remove.mutate([item.id], {
-      onSuccess: () => {
+      onSuccess: async () => {
+        await checkPage();
         toast.success(`删除成功`);
+        setOpen(false);
       },
       onError: (err: Error) => {
         toast.error(err.message || '删除失败');
@@ -39,7 +44,7 @@ export function DeleteItemDialog({ collection, item }: {
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 w-8 text-muted-foreground hover:text-destructive">
           <Trash2Icon className="h-4 w-4"/>

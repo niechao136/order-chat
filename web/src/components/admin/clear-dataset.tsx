@@ -1,6 +1,7 @@
 'use client';
 
 import { EraserIcon } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -23,12 +24,16 @@ export function ClearDatasetDialog({ collection }: {
   collection: string
 }) {
 
-  const { clear } = useRecordActions(collection);
+  const { clear, checkPage } = useRecordActions(collection);
+
+  const [ open, setOpen ] = useState(false);
 
   const clearDataset = () => {
     clear.mutate(undefined, {
-      onSuccess: () => {
+      onSuccess: async () => {
+        await checkPage();
         toast.success(`知识库 ${collection} 清空成功`);
+        setOpen(false);
       },
       onError: (err: Error) => {
         toast.error(err.message || '清空失败');
@@ -37,7 +42,7 @@ export function ClearDatasetDialog({ collection }: {
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10">
           <EraserIcon className="mr-2 h-4 w-4"/> 清空知识库
