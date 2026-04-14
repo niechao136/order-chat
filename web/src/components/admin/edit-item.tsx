@@ -22,7 +22,6 @@ import { Label } from '@/components/ui/label';
 
 import { useRecordActions } from '@/hooks/use-dataset';
 import { cn } from '@/lib/utils';
-import { usePagingStore } from '@/stores/paging';
 import { RecordInfo } from '@/types/dataset';
 
 
@@ -42,12 +41,7 @@ export function EditItemDialog({ collection, item }: {
   item: RecordInfo
 }) {
 
-  const pagingKey = `dataset_${collection}`;
-
-  const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
-  const { setPage } = usePagingStore();
-
-  const { update, refresh } = useRecordActions(collection);
+  const { update } = useRecordActions(collection);
 
   const [ open, setOpen ] = useState(false);
 
@@ -66,10 +60,6 @@ export function EditItemDialog({ collection, item }: {
     const body = JSON.stringify(data);
     update.mutate({ id, body }, {
       onSuccess: async () => {
-        const data = await refresh({ page, size });
-        const total = data?.total || 0;
-        const totalPage = Math.ceil(total / size) || 1;
-        setPage(pagingKey, totalPage);
         toast.success(`向量修改成功`);
         setOpen(false);
       },

@@ -6,16 +6,11 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { useRecordActions } from '@/hooks/use-dataset';
-import { usePagingStore } from '@/stores/paging';
 
 
 export function UploadItem({ collection }: {
   collection: string
 }) {
-
-  const pagingKey = `dataset_${collection}`;
-
-  const { setPage } = usePagingStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,7 +23,6 @@ export function UploadItem({ collection }: {
     formData.append('file', file);
     upload.mutate(formData, {
       onSuccess: () => {
-        setPage(pagingKey, 1);
         toast.success("上传成功");
         if (fileInputRef.current) fileInputRef.current.value = '';
       }

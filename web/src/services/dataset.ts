@@ -48,6 +48,12 @@ export async function getRecordList(name: string, params?: PageParams) {
   return data
 }
 
+export async function getRecordCount(name: string) {
+  const res = await apiRequest(`dataset/${name}/count`)
+  const data: DataResult<number> = await res.json()
+  return data
+}
+
 export async function addRecord(name: string, body: string) {
   const res = await apiRequest(`dataset/${name}/item`, {
     method: 'POST',

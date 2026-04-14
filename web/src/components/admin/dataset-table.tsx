@@ -1,7 +1,8 @@
 'use client';
 
 import { DatabaseIcon, Trash2Icon } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -52,16 +53,17 @@ export function DatasetTable({ collection }: {
   const { data, isLoading } = useRecordList(collection, params);
   const { remove } = useRecordActions(collection);
 
-  const totalPage = (() => {
-    if (!data?.total) return 1;
-    return Math.ceil(data.total / size);
-  })();
-
-  useEffect(() => {
-    if (page > totalPage) {
-      setPage(pagingKey, totalPage);
-    }
-  }, [totalPage, page, pagingKey, setPage]);
+  const batchDel = () => {
+    remove.mutate(selectedIds, {
+      onSuccess: async () => {
+        toast.success(`批量删除成功`);
+        setSelectedIds([]);
+      },
+      onError: (err: Error) => {
+        toast.error(err.message || '批量删除失败');
+      },
+    })
+  }
 
   return (
     <>
@@ -162,7 +164,7 @@ export function DatasetTable({ collection }: {
             onClick={() => setSelectedIds([])}>
             取消
           </Button>
-          <Button size="sm" variant="destructive" className="h-8" onClick={() => remove.mutate(selectedIds, { onSuccess: () => setSelectedIds([]) })}>
+          <Button size="sm" variant="destructive" className="h-8" onClick={() => batchDel()}>
             <Trash2Icon className="mr-2 h-3.5 w-3.5" /> 批量删除
           </Button>
         </div>

@@ -9,6 +9,7 @@ import {
   addCol,
   deleteCol,
   getRecordList,
+  getRecordCount,
   searchRecord,
   addRecord,
   updateRecord,
@@ -17,6 +18,7 @@ import {
   getRecordInfo,
   uploadRecord,
 } from '@/services/dataset';
+import { usePagingStore } from '@/stores/paging';
 import { PageParams } from '@/types/api';
 
 
@@ -67,7 +69,10 @@ export function useColAction() {
     onSuccess: async (res, name) => {
       if (res.status === 1) {
         await queryClient.invalidateQueries({ queryKey: datasetKeys.lists() });
-        queryClient.removeQueries({ queryKey: datasetKeys.recordLists(name) });
+        queryClient.removeQueries({
+          queryKey: datasetKeys.recordLists(name),
+          exact: false,
+        });
       } else {
         throw new Error(res?.msg);
       }
@@ -115,10 +120,31 @@ export function useRecordInfo(name: string, id: string) {
 
 export function useRecordActions(colName: string) {
   const queryClient = useQueryClient();
+  const pagingKey = `dataset_${colName}`;
+  const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
+  const { setPage } = usePagingStore();
 
-  // 通用的刷新函数：刷新该集合下的所有列表（分页、搜索等）
-  const refreshLists = async () => {
-    await queryClient.invalidateQueries({ queryKey: datasetKeys.recordLists(colName) });
+  const jumpToLast = async () => {
+    queryClient.removeQueries({
+      queryKey: datasetKeys.recordLists(colName),
+      exact: false
+    });
+    const data = await getRecordCount(colName);
+    const total = data?.data || 0;
+    const totalPage = Math.ceil(total / size) || 1;
+    setPage(pagingKey, totalPage);
+  };
+  const checkPage = async () => {
+    queryClient.removeQueries({
+      queryKey: datasetKeys.recordLists(colName),
+      exact: false
+    });
+    const data = await getRecordCount(colName);
+    const total = data?.data || 0;
+    const totalPage = Math.ceil(total / size) || 1;
+    if (page > totalPage) {
+      setPage(pagingKey, totalPage);
+    }
   };
 
   // 新增
@@ -126,9 +152,9 @@ export function useRecordActions(colName: string) {
     mutationFn: (body: string) => addRecord(colName, body),
     onSuccess: async (res) => {
       if (res.status === 1) {
-        await refreshLists();
+        await jumpToLast();
       } else {
-        throw new Error(res?.msg)
+        throw new Error(res?.msg);
       }
     },
   });
@@ -139,9 +165,9 @@ export function useRecordActions(colName: string) {
       updateRecord(colName, id, body),
     onSuccess: async (res) => {
       if (res.status === 1) {
-        await refreshLists();
+        await jumpToLast();
       } else {
-        throw new Error(res?.msg)
+        throw new Error(res?.msg);
       }
     },
   });
@@ -151,9 +177,9 @@ export function useRecordActions(colName: string) {
     mutationFn: (ids: string[]) => deleteRecord(colName, JSON.stringify({ ids })),
     onSuccess: async (res) => {
       if (res.status === 1) {
-        await refreshLists();
+        await checkPage();
       } else {
-        throw new Error(res?.msg)
+        throw new Error(res?.msg);
       }
     },
   });
@@ -163,9 +189,9 @@ export function useRecordActions(colName: string) {
     mutationFn: () => clearCol(colName),
     onSuccess: async (res) => {
       if (res.status === 1) {
-        await refreshLists();
+        await checkPage();
       } else {
-        throw new Error(res?.msg)
+        throw new Error(res?.msg);
       }
     },
   });
@@ -175,7 +201,7 @@ export function useRecordActions(colName: string) {
     mutationFn: (body: FormData) => uploadRecord(colName, body),
     onSuccess: async (res) => {
       if (res.status === 1) {
-        await refreshLists();
+        await jumpToLast();
       } else {
         throw new Error(res?.msg)
       }
@@ -190,15 +216,6 @@ export function useRecordActions(colName: string) {
     }) => searchRecord(colName, JSON.stringify({ text, top_k })),
   });
 
-  // 手动刷新列表
-  const refresh = async (params: PageParams) => {
-    return await queryClient.fetchQuery({
-      queryKey: datasetKeys.recordList(colName, params),
-      queryFn: () => getRecordList(colName, params),
-      staleTime: 0
-    });
-  };
-
   return {
     add,
     update,
@@ -206,6 +223,5 @@ export function useRecordActions(colName: string) {
     clear,
     upload,
     search,
-    refresh,
   };
 }

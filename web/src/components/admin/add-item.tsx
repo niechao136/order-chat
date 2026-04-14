@@ -21,7 +21,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from '@/components/ui/label';
 import { useRecordActions } from '@/hooks/use-dataset';
 import { cn } from '@/lib/utils';
-import { usePagingStore } from '@/stores/paging';
 
 
 // 定义表单校验逻辑
@@ -39,12 +38,7 @@ export function AddItemDialog({ collection }: {
   collection: string
 }) {
 
-  const pagingKey = `dataset_${collection}`;
-
-  const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
-  const { setPage } = usePagingStore();
-
-  const { add, refresh } = useRecordActions(collection);
+  const { add } = useRecordActions(collection);
 
   const [ open, setOpen ] = useState(false);
 
@@ -66,10 +60,6 @@ export function AddItemDialog({ collection }: {
     // 调用 Mutation
     add.mutate(JSON.stringify(data), {
       onSuccess: async () => {
-        const data = await refresh({ page, size });
-        const total = data?.total || 0;
-        const totalPage = Math.ceil(total / size) || 1;
-        setPage(pagingKey, totalPage);
         toast.success(`向量创建成功`);
         setOpen(false);
       },

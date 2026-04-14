@@ -114,6 +114,13 @@ async def item_list(
     )
 
 
+@dataset_router.get("/{name}/count", response_model=DataResult[int])
+async def item_count(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+    info = await client.count(collection_name=name)
+    total = info.count
+    return DataResult(status=1, data=total, msg=None)
+
+
 @dataset_router.post("/{name}/item", response_model=DataResult[str])
 async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     vector = await get_embedding_async(text=req.text)
