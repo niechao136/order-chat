@@ -57,18 +57,19 @@ export function useColAction() {
       if (res.status === 1) {
         await queryClient.invalidateQueries({ queryKey: datasetKeys.lists() });
       } else {
-        throw new Error(res?.msg)
+        throw new Error(res?.msg);
       }
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteCol,
-    onSuccess: async (res) => {
+    onSuccess: async (res, name) => {
       if (res.status === 1) {
         await queryClient.invalidateQueries({ queryKey: datasetKeys.lists() });
+        queryClient.removeQueries({ queryKey: datasetKeys.recordLists(name) });
       } else {
-        throw new Error(res?.msg)
+        throw new Error(res?.msg);
       }
     },
   });
@@ -99,9 +100,9 @@ export function useRecordList(name: string, params?: PageParams) {
         queryClient.setQueryData(datasetKeys.recordDetail(name, record.id), record);
       });
     }
-  }, [ query.data, name, queryClient ])
+  }, [ query.data, name, queryClient ]);
 
-  return query
+  return query;
 }
 
 export function useRecordInfo(name: string, id: string) {
@@ -120,7 +121,7 @@ export function useRecordActions(colName: string) {
     await queryClient.invalidateQueries({ queryKey: datasetKeys.recordLists(colName) });
   };
 
-  // 1. 新增
+  // 新增
   const add = useMutation({
     mutationFn: (body: string) => addRecord(colName, body),
     onSuccess: async (res) => {
@@ -132,7 +133,7 @@ export function useRecordActions(colName: string) {
     },
   });
 
-  // 2. 修改
+  // 修改
   const update = useMutation({
     mutationFn: ({ id, body }: { id: string; body: string }) =>
       updateRecord(colName, id, body),
@@ -145,7 +146,7 @@ export function useRecordActions(colName: string) {
     },
   });
 
-  // 3. 删除/批量删除
+  // 删除/批量删除
   const remove = useMutation({
     mutationFn: (ids: string[]) => deleteRecord(colName, JSON.stringify({ ids })),
     onSuccess: async (res) => {
@@ -157,7 +158,7 @@ export function useRecordActions(colName: string) {
     },
   });
 
-  // 4. 清空集合
+  // 清空集合
   const clear = useMutation({
     mutationFn: () => clearCol(colName),
     onSuccess: async (res) => {
@@ -169,6 +170,7 @@ export function useRecordActions(colName: string) {
     },
   });
 
+  // 批量上传
   const upload = useMutation({
     mutationFn: (body: FormData) => uploadRecord(colName, body),
     onSuccess: async (res) => {
@@ -180,12 +182,22 @@ export function useRecordActions(colName: string) {
     }
   });
 
+  // 检索测试
   const search = useMutation({
     mutationFn: ({ text, top_k }: {
       text: string;
       top_k: number;
     }) => searchRecord(colName, JSON.stringify({ text, top_k })),
   });
+
+  // 手动刷新列表
+  const refresh = async (params: PageParams) => {
+    return await queryClient.fetchQuery({
+      queryKey: datasetKeys.recordList(colName, params),
+      queryFn: () => getRecordList(colName, params),
+      staleTime: 0
+    });
+  };
 
   return {
     add,
@@ -194,5 +206,6 @@ export function useRecordActions(colName: string) {
     clear,
     upload,
     search,
+    refresh,
   };
 }

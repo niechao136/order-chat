@@ -35,16 +35,16 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function AddItemDialog({ collection, totalPage }: {
+export function AddItemDialog({ collection }: {
   collection: string
-  totalPage: number
 }) {
 
   const pagingKey = `dataset_${collection}`;
 
+  const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
   const { setPage } = usePagingStore();
 
-  const { add } = useRecordActions(collection);
+  const { add, refresh } = useRecordActions(collection);
 
   const [ open, setOpen ] = useState(false);
 
@@ -65,7 +65,10 @@ export function AddItemDialog({ collection, totalPage }: {
   const onSubmit = async (data: FormValues) => {
     // 调用 Mutation
     add.mutate(JSON.stringify(data), {
-      onSuccess: () => {
+      onSuccess: async () => {
+        const data = await refresh({ page, size });
+        const total = data?.total || 0;
+        const totalPage = Math.ceil(total / size) || 1;
         setPage(pagingKey, totalPage);
         toast.success(`向量创建成功`);
         setOpen(false);

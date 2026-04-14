@@ -72,7 +72,7 @@ export function DatasetTable({ collection }: {
             <CardDescription>管理当前知识库中的 {data?.total || 0} 条向量数据</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <AddItemDialog collection={collection} totalPage={totalPage} />
+            <AddItemDialog collection={collection} />
             <UploadItem collection={collection} />
             <ClearDatasetDialog collection={collection} />
           </div>
@@ -128,7 +128,7 @@ export function DatasetTable({ collection }: {
                           <ViewItemDialog content={record.payload.content}/>
 
                           {/* 2. 修改向量 */}
-                          <EditItemDialog collection={collection} item={record} totalPage={totalPage} />
+                          <EditItemDialog collection={collection} item={record} />
 
                           {/* 3. 删除向量 */}
                           <DeleteItemDialog collection={collection} item={record} />
