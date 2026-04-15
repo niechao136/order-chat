@@ -23,7 +23,7 @@ export default function DatasetDetailPage() {
   const [tab, setTab] = useState('manage');
 
   return (
-    <div className="p-6 h-full flex flex-col gap-4 bg-background">
+    <div className="p-6 flex flex-col gap-4 bg-background">
       <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           {/* Tab 切换控制 */}

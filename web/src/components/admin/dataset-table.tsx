@@ -1,7 +1,7 @@
 'use client';
 
 import { DatabaseIcon, Trash2Icon } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -41,12 +41,16 @@ export function DatasetTable({ collection }: {
 
   const pagingKey = `dataset_${collection}`;
   const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
-  const { setSize, setPage } = usePagingStore();
+  const { setSize, setPage, initPaging } = usePagingStore();
+
+  useEffect(() => {
+    initPaging(pagingKey);
+  }, [initPaging, pagingKey]);
 
   const params = useMemo(() => ({
     page,
     size,
-  }), [page, size])
+  }), [page, size]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -104,7 +108,7 @@ export function DatasetTable({ collection }: {
                     <TableCell colSpan={4} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center gap-2 opacity-50">
                         <DatabaseIcon className="h-8 w-8"/>
-                        <p>暂无数据，请先上传文件</p>
+                        <p>暂无数据，请先新增向量</p>
                       </div>
                     </TableCell>
                   </TableRow>

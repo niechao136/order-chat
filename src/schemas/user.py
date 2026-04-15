@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 from .auth import UserRole
 
@@ -28,3 +28,7 @@ class UserUpdate(BaseModel):
 
 class UserPassword(BaseModel):
     password: str
+
+
+class UserDel(BaseModel):
+    ids: List[str]

@@ -83,7 +83,7 @@ async def init_db():
         async with conn.transaction():
             print("开始执行数据库初始化 (Schema)...")
 
-            # 创建函数
+            # 创建自动更新 updated_at 的触发器函数
             await conn.execute("""
             CREATE OR REPLACE FUNCTION update_modified_column()
             RETURNS TRIGGER AS $$
@@ -98,13 +98,28 @@ async def init_db():
             await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
+                username VARCHAR(50) NOT NULL,
                 email VARCHAR(100),
                 password VARCHAR(255) NOT NULL,
                 role VARCHAR(20) NOT NULL DEFAULT 'user',
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
             )
+            """)
+
+            # 创建部分唯一索引：保证 username 在未删除用户中唯一
+            await conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique_active
+            ON users (username)
+            WHERE deleted_at IS NULL;
+            """)
+
+            # 创建索引加速按 deleted_at 过滤的查询
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_users_deleted_at
+            ON users (deleted_at)
+            WHERE deleted_at IS NULL;
             """)
 
             # 绑定触发器
@@ -124,8 +139,10 @@ async def init_db():
             hash_pwd = pwd_context.hash(admin_pwd)
             await conn.execute("""
             INSERT INTO users (username, password, role)
-            VALUES (%s, %s, 'admin')
-            ON CONFLICT (username) DO NOTHING;
-            """, (admin_usr, hash_pwd))
+            SELECT %s, %s, 'admin'
+            WHERE NOT EXISTS (SELECT 1
+                FROM users
+                WHERE username = %s AND deleted_at IS NULL);
+            """, (admin_usr, hash_pwd, admin_usr))
 
             print("数据库初始化完成：Schema 创建成功，管理员用户已就绪。")

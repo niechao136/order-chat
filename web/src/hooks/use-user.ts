@@ -7,23 +7,26 @@ import {
   addUser,
   changeOwnerPwd,
   changeUserPwd,
+  deleteUser,
   getUserInfo,
   getUserList,
+  getUserCount,
   getOwnerInfo,
   updateUser,
 } from '@/services/user';
+import { usePagingStore } from '@/stores/paging';
 import { PageParams } from '@/types/api';
-
 
 
 export const userKeys = {
   all: [ 'user' ] as const,
   lists: () => [ ...userKeys.all, 'list' ] as const,
   list: (params?: PageParams) => [ ...userKeys.lists(), params ] as const,
+  count: () => [ ...userKeys.all, 'count' ] as const,
   owner: () => [ ...userKeys.all, 'owner' ] as const,
   details: () => [ ...userKeys.all, 'detail' ] as const,
   detail: (id: string) => [ ...userKeys.details(), id ] as const,
-}
+};
 
 export function useOwner() {
   return useQuery({
@@ -39,7 +42,7 @@ export function useUserList(params?: PageParams) {
   const query = useQuery({
     queryKey: userKeys.list(params),
     queryFn: () => getUserList(params)
-  })
+  });
 
   useEffect(() => {
     if (query.data?.data) {
@@ -49,9 +52,16 @@ export function useUserList(params?: PageParams) {
         queryClient.setQueryData(userKeys.detail(user.id), user);
       });
     }
-  }, [ query.data, queryClient ])
+  }, [ query.data, queryClient ]);
 
-  return query
+  return query;
+}
+
+export function useUserCount() {
+  return useQuery({
+    queryKey: userKeys.count(),
+    queryFn: () => getUserCount().then(res => res.data)
+  });
 }
 
 export function useUserInfo(user_id: string) {
@@ -59,20 +69,47 @@ export function useUserInfo(user_id: string) {
     queryKey: userKeys.detail(user_id),
     queryFn: () => getUserInfo(user_id).then(res => res.data),
     enabled: !!user_id,
-  })
+  });
 }
 
-export function useUserAction(params?: PageParams) {
+export function useUserAction() {
   const queryClient = useQueryClient();
+  const pagingKey = 'user';
+  const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
+  const { setPage, setSort, setSearch, initPaging } = usePagingStore();
 
-  const refreshList = async () => {
-    await queryClient.invalidateQueries({ queryKey: userKeys.list(params) });
+  useEffect(() => {
+    initPaging(pagingKey);
+  }, [initPaging, pagingKey]);
+
+  const jumpToFirst = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: userKeys.lists(),
+      exact: false
+    });
+    setSort(pagingKey, 'updated_at', 'desc');
+    setSearch(pagingKey, '');
+    setPage(pagingKey, 1);
+  };
+
+  const checkPage = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: userKeys.lists(),
+      exact: false
+    });
+    const total = await fetchCount();
+    const totalPage = Math.ceil((total || 0) / size) || 1;
+    if (page > totalPage) {
+      setPage(pagingKey, totalPage);
+    }
   };
 
   const add = useMutation({
     mutationFn: (body: string) => addUser(body),
-    onSuccess: async () => {
-      await refreshList();
+    onSuccess: async (res) => {
+      if (res?.status !== 1) {
+        throw new Error(res?.msg);
+      }
     },
   });
 
@@ -81,8 +118,19 @@ export function useUserAction(params?: PageParams) {
       user_id: string;
       body: string;
     }) => updateUser(user_id, body),
-    onSuccess: async () => {
-      await refreshList();
+    onSuccess: async (res) => {
+      if (res?.status !== 1) {
+        throw new Error(res?.msg);
+      }
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: (ids: string[]) => deleteUser(JSON.stringify({ ids })),
+    onSuccess: async (res) => {
+      if (res?.status !== 1) {
+        throw new Error(res?.msg);
+      }
     },
   });
 
@@ -91,6 +139,11 @@ export function useUserAction(params?: PageParams) {
       user_id: string,
       password: string,
     }) => changeUserPwd(user_id, JSON.stringify({ password })),
+    onSuccess: async (res) => {
+      if (res?.status !== 1) {
+        throw new Error(res?.msg);
+      }
+    }
   });
 
   const changeMe = useMutation({
@@ -99,16 +152,26 @@ export function useUserAction(params?: PageParams) {
     }) => changeOwnerPwd(JSON.stringify({ password })),
     onSuccess: (res) => {
       if (res?.status !== 1) {
-        throw new Error(res?.msg)
+        throw new Error(res?.msg);
       }
     },
   });
 
+  const fetchCount = async () => {
+    return await queryClient.fetchQuery({
+      queryKey: userKeys.count(),
+      queryFn: () => getUserCount().then(res => res.data),
+      staleTime: 0
+    })
+  };
+
   return {
     add,
     update,
+    remove,
     change,
     changeMe,
+    checkPage,
+    jumpToFirst,
   }
 }
-

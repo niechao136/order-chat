@@ -122,7 +122,11 @@ export function useRecordActions(colName: string) {
   const queryClient = useQueryClient();
   const pagingKey = `dataset_${colName}`;
   const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
-  const { setPage } = usePagingStore();
+  const { setPage, initPaging } = usePagingStore();
+
+  useEffect(() => {
+    initPaging(pagingKey);
+  }, [initPaging, pagingKey]);
 
   // 新增/修改/批量生成后跳转到最后一页，看到最新的数据
   const jumpToLast = async () => {

@@ -1,12 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { KeyRound, Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { RotateCcwKeyIcon, Loader2Icon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import * as z from 'zod';
 
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -14,13 +15,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Field, FieldLabel, FieldGroup, FieldError } from '@/components/ui/field';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
 import { useUserAction } from '@/hooks/use-user';
-import { handleLogout } from '@/services/api';
-import { DialogProps } from '@/types/ui';
+import { UserInfo } from '@/types/user';
 
 
 const formSchema = z.object({
@@ -42,10 +43,13 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function ChangePassword({ open, onOpenChange }: DialogProps) {
+export function ResetUserDialog({ info }: {
+  info: UserInfo
+}) {
 
-  const { changeMe } = useUserAction()
-  const { isPending, mutate } = changeMe
+  const { change } = useUserAction();
+
+  const [ open, setOpen ] = useState(false);
 
   const { handleSubmit, register, reset, formState: { errors } } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -57,11 +61,13 @@ export function ChangePassword({ open, onOpenChange }: DialogProps) {
   }, [open, reset]);
 
   const onSubmit = async ({ password }: FormValues) => {
-    mutate({ password }, {
+    change.mutate({
+      user_id: info.id,
+      password,
+    }, {
       onSuccess: () => {
         toast.success('密码修改成功，请重新登录');
-        onOpenChange(false);
-        handleLogout();
+        setOpen(false);
       },
       onError: (err) => {
         toast.error(err.message || "修改失败");
@@ -70,17 +76,20 @@ export function ChangePassword({ open, onOpenChange }: DialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary">
+          <RotateCcwKeyIcon className="h-4 w-4"/>
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <KeyRound className="w-5 h-5 text-primary" />
-            </div>
-            <DialogTitle>修改密码</DialogTitle>
+            <DialogTitle>重置密码</DialogTitle>
           </div>
           <DialogDescription className="pt-2">
-            请输入您的新密码。修改成功后，将会强制登出，之后请使用新密码重新登录。
+            请输入新密码。
           </DialogDescription>
         </DialogHeader>
 
@@ -111,11 +120,11 @@ export function ChangePassword({ open, onOpenChange }: DialogProps) {
           </FieldGroup>
 
           <DialogFooter className="pt-4">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" type="button" onClick={() => setOpen(false)}>
               取消
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={change.isPending}>
+              {change.isPending && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
               确认修改
             </Button>
           </DialogFooter>
@@ -123,4 +132,5 @@ export function ChangePassword({ open, onOpenChange }: DialogProps) {
       </DialogContent>
     </Dialog>
   );
+
 }

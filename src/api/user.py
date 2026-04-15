@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
+from typing import List
 
 from src.database.postgre import get_db_pool
 from src.schemas.auth import TokenDict
 from src.schemas.page import PageResult, PageParams, DataResult
-from src.schemas.user import UserInfo, UserAdd, UserUpdate, UserPassword
+from src.schemas.user import UserInfo, UserAdd, UserUpdate, UserPassword, UserDel
 from src.utils.jwt import get_current_admin, get_current_user
 from src.utils.api import hand_id
 from src.utils.pwd import pwd_context
@@ -16,7 +17,7 @@ user_router = APIRouter(prefix="/user", tags=["User"])
 async def user_list(params: PageParams = Depends(), _: TokenDict = Depends(get_current_admin)):
     pool = await get_db_pool()
     async with pool.connection() as conn:
-        base_query = "FROM users WHERE 1=1"
+        base_query = "FROM users WHERE deleted_at IS NULL"
         args = []
 
         if params.keyword:
@@ -48,6 +49,21 @@ async def user_list(params: PageParams = Depends(), _: TokenDict = Depends(get_c
         )
 
 
+@user_router.get("/count", response_model=DataResult[int])
+async def user_count(_: TokenDict = Depends(get_current_admin)):
+    """
+    获取活跃用户总数（未软删除的用户）
+    """
+    pool = await get_db_pool()
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL"
+        )
+        row = await cur.fetchone()
+        count = row.get("count") if isinstance(row, dict) else row[0]
+        return DataResult(status=1, msg=None, data=count)
+
+
 @user_router.get("/me", response_model=DataResult[UserInfo])
 async def current_user(user: TokenDict = Depends(get_current_user)):
     pool = await get_db_pool()
@@ -56,9 +72,13 @@ async def current_user(user: TokenDict = Depends(get_current_user)):
             """
             SELECT id, username, email, role, created_at, updated_at
             FROM users
-            WHERE id = %s
+            WHERE id = %s AND deleted_at IS NULL
             """, (int(user.id),))
         row = await cur.fetchone()
+
+        if not row:
+            return DataResult(status=0, msg="User not found or inactive", data=None)
+
         return DataResult(status=1, data=UserInfo(**hand_id(row)), msg=None)
 
 
@@ -70,9 +90,13 @@ async def user_info(user_id: str, _: TokenDict = Depends(get_current_admin)):
             """
             SELECT id, username, email, role, created_at, updated_at
             FROM users
-            WHERE id = %s
+            WHERE id = %s AND deleted_at IS NULL
             """, (int(user_id),))
         row = await cur.fetchone()
+
+        if not row:
+            return DataResult(status=0, msg="User not found or inactive", data=None)
+
         return DataResult(status=1, data=UserInfo(**hand_id(row)), msg=None)
 
 
@@ -81,7 +105,10 @@ async def add_user(user: UserAdd, _: TokenDict = Depends(get_current_admin)):
     pool = await get_db_pool()
     async with pool.connection() as conn:
         async with conn.transaction():
-            cur = await conn.execute("SELECT 1 FROM users WHERE username = %s", (user.username,))
+            cur = await conn.execute(
+                "SELECT 1 FROM users WHERE username = %s AND deleted_at IS NULL",
+                (user.username,)
+            )
             if await cur.fetchone():
                 return DataResult(status=0, msg="Username already exists", data=None)
 
@@ -104,12 +131,21 @@ async def update_user(user_id: str, user: UserUpdate, _: TokenDict = Depends(get
     async with pool.connection() as conn:
         async with conn.transaction():
             target_id = int(user_id)
-            cur = await conn.execute("SELECT id FROM users WHERE id = %s", (target_id,))
+            cur = await conn.execute(
+                "SELECT id FROM users WHERE id = %s AND deleted_at IS NULL",
+                (target_id,)
+            )
             if not await cur.fetchone():
-                return DataResult(status=0, msg="User not found", data=None)
+                return DataResult(status=0, msg="User not found or inactive", data=None)
 
             cur = await conn.execute(
-                "SELECT 1 FROM users WHERE (username = %s OR email = %s) AND id != %s",
+                """
+                SELECT 1
+                FROM users
+                WHERE (username = %s OR email = %s)
+                  AND id != %s
+                  AND deleted_at IS NULL
+                """,
                 (user.username, user.email, target_id)
             )
             if await cur.fetchone():
@@ -128,11 +164,50 @@ async def update_user(user_id: str, user: UserUpdate, _: TokenDict = Depends(get
             return DataResult(status=1, msg=None, data=info)
 
 
+@user_router.delete("", response_model=DataResult[List[str]])
+async def delete_user(req: UserDel, _: TokenDict = Depends(get_current_admin)):
+    if not req.ids:
+        return DataResult(status=0, msg="No user IDs provided", data=None)
+
+    pool = await get_db_pool()
+    async with pool.connection() as conn:
+        async with conn.transaction():
+            try:
+                target_ids = [int(uid) for uid in req.ids]
+            except ValueError:
+                return DataResult(status=0, msg="Invalid user ID format", data=None)
+
+            cur = await conn.execute(
+                """
+                UPDATE users
+                SET deleted_at = CURRENT_TIMESTAMP
+                WHERE id = ANY (%s)
+                  AND deleted_at IS NULL
+                RETURNING id
+                """,
+                (target_ids,)
+            )
+            rows = await cur.fetchall()
+            deleted_ids = [row[0] for row in rows]
+
+            if not deleted_ids:
+                return DataResult(status=0, msg="No active users found to delete", data=None)
+
+            return DataResult(status=1, msg=None, data=deleted_ids)
+
+
 @user_router.patch("/me/password", response_model=DataResult[str])
 async def change_my_password(info: UserPassword, user: TokenDict = Depends(get_current_user)):
     pool = await get_db_pool()
     async with pool.connection() as conn:
         async with conn.transaction():
+            cur = await conn.execute(
+                "SELECT id FROM users WHERE id = %s AND deleted_at IS NULL",
+                (int(user.id),)
+            )
+            if not await cur.fetchone():
+                return DataResult(status=0, msg="User not found or inactive", data=None)
+
             new_hash = pwd_context.hash(info.password)
             await conn.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, int(user.id)))
             return DataResult(status=1, msg=None, data=None)
@@ -144,9 +219,12 @@ async def admin_reset_password(user_id: str, info: UserPassword, _: TokenDict = 
     async with pool.connection() as conn:
         async with conn.transaction():
             target_id = int(user_id)
-            cur = await conn.execute("SELECT id FROM users WHERE id = %s", (target_id,))
+            cur = await conn.execute(
+                "SELECT id FROM users WHERE id = %s AND deleted_at IS NULL",
+                (target_id,)
+            )
             if not await cur.fetchone():
-                return DataResult(status=0, msg="User not found", data=None)
+                return DataResult(status=0, msg="User not found or inactive", data=None)
 
             new_hash = pwd_context.hash(info.password)
             await conn.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, target_id))

@@ -19,7 +19,7 @@ export interface PageParams {
   size?: number
 
   order_by?: string
-  direction?: 'asc' | 'desc'
+  direction?: 'asc' | 'desc' | ''
 
   keyword?: string
 }

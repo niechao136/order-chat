@@ -24,7 +24,7 @@ export const getParams = (params?: PageParams) => {
   if (!params) return ''
 
   const filtered = Object.entries(params || {})
-    .filter(([_, v]) => v !== undefined && v !== null)
+    .filter(([k, v]) => !!k && !!v && !!String(v).trim())
     .reduce((acc, [k, v]) => ({ ...acc, [k]: String(v) }), {});
 
    const query = new URLSearchParams(filtered).toString();

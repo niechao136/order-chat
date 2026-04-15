@@ -10,6 +10,12 @@ export async function getUserList(params?: PageParams) {
   return data
 }
 
+export async function getUserCount() {
+  const res = await apiRequest(`user/count`)
+  const data: DataResult<number> = await res.json()
+  return data
+}
+
 export async function getOwnerInfo() {
   const res = await apiRequest('user/me')
   const data: DataResult<UserInfo> = await res.json()
@@ -37,6 +43,15 @@ export async function updateUser(user_id: string, body: string) {
     body,
   })
   const data: DataResult<UserInfo> = await res.json()
+  return data
+}
+
+export async function deleteUser(body: string) {
+  const res = await apiRequest(`user`, {
+    method: 'DELETE',
+    body,
+  })
+  const data: DataResult<string[]> = await res.json()
   return data
 }
 

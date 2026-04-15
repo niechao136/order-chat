@@ -21,7 +21,7 @@ export const chatKeys = {
 export function useGraph() {
   return useQuery({
     queryKey: chatKeys.graph(),
-    queryFn: () => getGraphList().then(res => res),
+    queryFn: getGraphList,
     staleTime: 1000 * 60 * 10
   });
 }
