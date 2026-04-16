@@ -15,6 +15,7 @@ export interface ColInfo {
 export interface PayloadInfo {
   content: string
   updated_at: number
+  [key: string]: unknown
 }
 
 export interface RecordInfo {
@@ -26,4 +27,12 @@ export interface ScoredPoint {
   id: string
   payload: PayloadInfo
   score: number
+}
+
+export interface FieldItem {
+  field_name: string
+  field_type: string
+  is_required: boolean
+  default_value?: unknown
+  description?: string
 }

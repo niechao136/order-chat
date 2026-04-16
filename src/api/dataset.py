@@ -1,8 +1,8 @@
 import time
-import re
+import json
 from typing import List, Any, cast
 
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http import models
 from qdrant_client.models import (
@@ -13,10 +13,12 @@ from qdrant_client.models import (
     PointStruct
 )
 
+from src.database.postgre import get_db_pool
 from src.dataset.embedding import get_embedding_async, get_embeddings_async_batch
 from src.dataset.qdrant import get_qdrant_client_async
-from src.schemas.dataset import CollectionAdd, ItemSearch, ItemAdd, ItemUpdate, ItemDelete
+from src.schemas.dataset import CollectionAdd, ItemSearch, ItemAdd, ItemUpdate, ItemDelete, FieldItem
 from src.schemas.page import NoPageResult, DataResult, PageResult, PageParams
+from src.utils.dataset import validate_and_fill_metadata, build_qdrant_filter
 from src.utils.jwt import get_current_admin
 from src.utils.uuid import generate_timestamp_uuid
 
@@ -122,13 +124,19 @@ async def item_count(name: str, client: AsyncQdrantClient = Depends(get_qdrant_c
 
 
 @dataset_router.post("/{name}/item", response_model=DataResult[str])
-async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
-    vector = await get_embedding_async(text=req.text)
+async def add_item(
+        name: str,
+        req: ItemAdd,
+        client: AsyncQdrantClient = Depends(get_qdrant_client_async)
+):
+    validated_metadata = await validate_and_fill_metadata(name, metadata=[req.metadata])
+    vector = await get_embedding_async(text=req.content)
     ms_timestamp = int(time.time() * 1000)
     uu_id = generate_timestamp_uuid(ms_timestamp)
     payload = {
         "content": req.text,
-        "updated_at": ms_timestamp
+        "updated_at": ms_timestamp,
+        **validated_metadata[0]
     }
     await client.upsert(collection_name=name, points=[
         models.PointStruct(id=uu_id, vector=vector, payload=payload)
@@ -139,42 +147,36 @@ async def add_item(name: str, req: ItemAdd, client: AsyncQdrantClient = Depends(
 @dataset_router.post("/{name}/item/upload", response_model=DataResult[List[str]])
 async def upload_item(
         name: str,
-        file: UploadFile = File(...),
+        req: List[ItemAdd],
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
-    try:
-        content = await file.read()
-        full_text = content.decode("utf-8")
-        raw_chunks = re.split(r'\n\s*\n', full_text)
+    metadata = [item.metadata for item in req]
+    validated_metadata = await validate_and_fill_metadata(name, metadata)
 
-        texts = [chunk.strip() for chunk in raw_chunks if chunk.strip()]
-        if not texts:
-            return DataResult(status=0, msg="未识别到有效的数据分块", data=[])
+    texts = [item.content for item in req]
+    vectors = await get_embeddings_async_batch(texts=texts)
 
-        vectors = await get_embeddings_async_batch(texts=texts)
+    points = []
+    new_ids = []
+    ms_timestamp = int(time.time() * 1000)
+    for i, text in enumerate(texts):
+        uu_id = generate_timestamp_uuid(ms_timestamp + i)
+        payload = {
+            "content": text,
+            "updated_at": ms_timestamp + i,
+            **validated_metadata[i]
+        }
 
-        points = []
-        new_ids = []
-        ms_timestamp = int(time.time() * 1000)
-        for i, text in enumerate(texts):
-            uu_id = generate_timestamp_uuid(ms_timestamp + i)
-            payload = {
-                "content": text,
-                "updated_at": ms_timestamp + i
-            }
+        points.append(PointStruct(id=uu_id, vector=vectors[i], payload=payload))
+        new_ids.append(str(uu_id))
 
-            points.append(PointStruct(id=uu_id, vector=vectors[i], payload=payload))
-            new_ids.append(str(uu_id))
-
-        client.upload_points(
-            collection_name=name,
-            points=points,
-            wait=True,
-            batch_size=64
-        )
-        return DataResult(status=1, msg=None, data=new_ids)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
+    client.upload_points(
+        collection_name=name,
+        points=points,
+        wait=True,
+        batch_size=64
+    )
+    return DataResult(status=1, msg=None, data=new_ids)
 
 
 @dataset_router.put("/{name}/item/{item_id}", response_model=DataResult[str])
@@ -184,12 +186,14 @@ async def update_item(
         req: ItemUpdate,
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
-    vector = await get_embedding_async(text=req.text)
+    validated_metadata = await validate_and_fill_metadata(name, metadata=[req.metadata])
+    vector = await get_embedding_async(text=req.content)
     ms_timestamp = int(time.time() * 1000)
     uu_id = generate_timestamp_uuid(ms_timestamp)
     payload = {
         "content": req.text,
-        "updated_at": ms_timestamp
+        "updated_at": ms_timestamp,
+        **validated_metadata[0]
     }
 
     if str(uu_id) != item_id:
@@ -212,7 +216,7 @@ async def get_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(
 
 
 @dataset_router.delete("/{name}/item/delete", response_model=DataResult[str])
-async def batch_delete_item(name: str, req: ItemDelete, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+async def delete_item(name: str, req: ItemDelete, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     await client.delete(collection_name=name, points_selector=req.ids, wait=True)
     return DataResult(status=1, msg=None, data=None)
 
@@ -227,13 +231,93 @@ async def clear_items(name: str, client: AsyncQdrantClient = Depends(get_qdrant_
 
 
 @dataset_router.post("/{name}/search", response_model=NoPageResult[ScoredPoint])
-async def add_item(name: str, req: ItemSearch, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+async def search_item(name: str, req: ItemSearch, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     vector = await get_embedding_async(text=req.text)
+
+    filter_obj = build_qdrant_filter(req.filters) if req.filters else None
 
     rows = await client.query_points(
         collection_name=name,
         query=cast(Any, vector),
         limit=req.top_k,
-        with_payload=True
+        with_payload=True,
+        query_filter=filter_obj
     )
     return NoPageResult(total=len(rows.points), data=rows.points)
+
+
+@dataset_router.get("/{name}/fields", response_model=DataResult[List[FieldItem]])
+async def list_fields(name: str, db_pool = Depends(get_db_pool)):
+    async with db_pool.connection() as conn:
+        cur = await conn.execute(
+            """
+            SELECT field_name, field_type, is_required, default_value, description
+            FROM collection_fields
+            WHERE collection_name = %s
+              AND deleted_at IS NULL
+            ORDER BY id
+            """,
+            (name,)
+        )
+        rows = await cur.fetchall()
+        fields = [
+            FieldItem(
+                field_name=row["field_name"],
+                field_type=row["field_type"],
+                is_required=row["is_required"] or False,
+                default_value=json.loads(row["default_value"]) if row["default_value"] else None,
+                description=row["description"] or None
+            )
+            for row in rows
+        ]
+    return DataResult(status=1, msg=None, data=fields)
+
+
+@dataset_router.post("/{name}/fields", response_model=DataResult[str])
+async def replace_fields(name: str, req: List[FieldItem], db_pool = Depends(get_db_pool)):
+    # 基础校验：字段名不能重复
+    field_names = [item.field_name for item in req]
+    if len(field_names) != len(set(field_names)):
+        raise HTTPException(status_code=400, detail="Duplicate field names are not allowed")
+
+    # 类型校验：确保 field_type 是支持的类型
+    allowed_types = {"string", "integer", "float", "boolean", "array", "object"}
+    for item in req:
+        if item.field_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported field_type '{item.field_type}' for field '{item.field_name}'"
+            )
+
+    async with db_pool.connection() as conn:
+        async with conn.transaction():
+            # 1. 软删除该集合下所有未被删除的字段
+            await conn.execute(
+                """
+                UPDATE collection_fields
+                SET deleted_at = NOW()
+                WHERE collection_name = %s
+                  AND deleted_at IS NULL
+                """,
+                (name,)
+            )
+
+            # 2. 批量插入新字段定义
+            for item in req:
+                await conn.execute(
+                    """
+                    INSERT INTO collection_fields
+                    (collection_name, field_name, field_type, is_required, default_value, description)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        name,
+                        item.field_name,
+                        item.field_type,
+                        item.is_required,
+                        json.dumps(item.default_value) if item.default_value is not None else None,
+                        item.description
+                    )
+                )
+
+    return DataResult(status=1, msg=None, data=name)

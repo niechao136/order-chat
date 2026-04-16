@@ -4,6 +4,7 @@ import sys
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+import os
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -49,7 +50,16 @@ app.include_router(router=dataset_router)
 app.include_router(router=user_router)
 
 
+def patch_windows_loop():
+    """专门针对 Windows 异步环境的补丁"""
+    if sys.platform == 'win32':
+        # 必须使用 Selector 策略，否则 psycopg 会报 "ValueError: Invalid file descriptor: -1"
+        # 或者在某些 I/O 操作时直接卡死/报错
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 if __name__ == "__main__":
+    patch_windows_loop()
+
     config = uvicorn.Config(
         "src.main:app",
         host="0.0.0.0",
@@ -67,11 +77,24 @@ if __name__ == "__main__":
         try:
             loop.run_until_complete(server.serve())
         except KeyboardInterrupt:
-            print("\nShutdown gracefully.")
-            # 直接退出进程
-            sys.exit(0)
+            # 优雅尝试：通知 uvicorn 停止
+            server.should_exit = True
+            print("\n[System] 正在停止服务...")
         finally:
-            # 显式关闭事件循环
-            loop.close()
+            # 彻底清理
+            try:
+                # 再次运行直到 server 状态更新（给钩子函数执行时间）
+                if server.started:
+                    loop.run_until_complete(server.shutdown())
+
+                # 显式关闭所有挂起的任务（解决连接池关闭慢的问题）
+                pending = asyncio.all_tasks(loop)
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            except Exception:
+                pass
+
+            print("[System] 服务已关闭")
+            # 最后的“暴力”美学：确保进程不残留
+            os._exit(0)
     else:
         server.run()

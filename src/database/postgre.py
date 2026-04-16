@@ -94,7 +94,7 @@ async def init_db():
             $$ language 'plpgsql';
             """)
 
-            # 创建用户表
+            # ---------- 创建用户表 ----------
             await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -108,14 +108,14 @@ async def init_db():
             )
             """)
 
-            # 创建部分唯一索引：保证 username 在未删除用户中唯一
+            # 部分唯一索引：保证 username 在未删除用户中唯一
             await conn.execute("""
             CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique_active
             ON users (username)
             WHERE deleted_at IS NULL;
             """)
 
-            # 创建索引加速按 deleted_at 过滤的查询
+            # 索引加速按 deleted_at 过滤的查询
             await conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_users_deleted_at
             ON users (deleted_at)
@@ -144,5 +144,55 @@ async def init_db():
                 FROM users
                 WHERE username = %s AND deleted_at IS NULL);
             """, (admin_usr, hash_pwd, admin_usr))
+
+            # ---------- 创建字段定义表 collection_fields ----------
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS collection_fields (
+                id SERIAL PRIMARY KEY,
+                collection_name VARCHAR(255) NOT NULL,
+                field_name VARCHAR(255) NOT NULL,
+                field_type VARCHAR(50) NOT NULL,
+                is_required BOOLEAN DEFAULT FALSE,
+                default_value JSONB,
+                description TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
+            )
+            """)
+
+            # 为 collection_name 创建索引，加速查询
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_collection_fields_collection_name
+            ON collection_fields (collection_name)
+            WHERE deleted_at IS NULL;
+            """)
+
+            # 部分唯一索引：保证同一集合内，未删除的字段名唯一
+            await conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS collection_fields_active_unique
+            ON collection_fields (collection_name, field_name)
+            WHERE deleted_at IS NULL;
+            """)
+
+            # 索引加速按 deleted_at 过滤的查询
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_collection_fields_deleted_at
+            ON collection_fields (deleted_at)
+            WHERE deleted_at IS NULL;
+            """)
+
+            # 绑定 updated_at 触发器
+            await conn.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_collection_fields_modified') THEN
+                    CREATE TRIGGER update_collection_fields_modified
+                        BEFORE UPDATE ON collection_fields
+                        FOR EACH ROW
+                        EXECUTE PROCEDURE update_modified_column();
+                END IF;
+            END $$;
+            """)
 
             print("数据库初始化完成：Schema 创建成功，管理员用户已就绪。")

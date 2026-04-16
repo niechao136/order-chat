@@ -1,7 +1,7 @@
 
 import { apiRequest } from '@/services/api';
 import { DataResult, PageParams, PageResult } from '@/types/api';
-import { ColDescr, ColInfo, RecordInfo, ScoredPoint } from '@/types/dataset';
+import { ColDescr, ColInfo, FieldItem, RecordInfo, ScoredPoint } from '@/types/dataset';
 import { getParams } from '@/utils/string';
 
 
@@ -102,5 +102,20 @@ export async function searchRecord(name: string, body: string) {
     body,
   })
   const data: PageResult<ScoredPoint> = await res.json()
+  return data
+}
+
+export async function getFieldList(name: string) {
+  const res = await apiRequest(`dataset/${name}/fields`)
+  const data: DataResult<FieldItem[]> = await res.json()
+  return data
+}
+
+export async function setFieldList(name: string, body: string) {
+  const res = await apiRequest(`dataset/${name}/fields`, {
+    method: 'POST',
+    body,
+  })
+  const data: DataResult = await res.json()
   return data
 }

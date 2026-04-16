@@ -17,9 +17,12 @@ import {
   clearCol,
   getRecordInfo,
   uploadRecord,
+  getFieldList,
+  setFieldList,
 } from '@/services/dataset';
 import { usePagingStore } from '@/stores/paging';
 import { PageParams } from '@/types/api';
+import { FieldItem } from '@/types/dataset';
 
 
 export const datasetKeys = {
@@ -28,6 +31,7 @@ export const datasetKeys = {
   details: () => [...datasetKeys.all, 'detail'] as const,
   detail: (name: string) => [...datasetKeys.details(), name] as const,
   records: (colName: string) => [...datasetKeys.all, colName, 'records'] as const,
+  recordFields: (colName: string) => [...datasetKeys.records(colName), 'field'] as const,
   recordLists: (colName: string) => [...datasetKeys.records(colName), 'list'] as const,
   recordList: (colName: string, params?: PageParams) => [...datasetKeys.recordLists(colName), params] as const,
   recordDetails: (colName: string) => [...datasetKeys.records(colName), 'detail'] as const,
@@ -116,6 +120,14 @@ export function useRecordInfo(name: string, id: string) {
     queryKey: datasetKeys.recordDetail(name, id),
     queryFn: () => getRecordInfo(name, id).then(res => res.data),
     enabled: !!name && !!id,
+  });
+}
+
+export function useRecordField(name: string) {
+  return useQuery({
+    queryKey: datasetKeys.recordFields(name),
+    queryFn: () => getFieldList(name).then(res => res.data),
+    enabled: !!name,
   });
 }
 
@@ -212,6 +224,8 @@ export function useRecordActions(colName: string) {
       top_k: number;
     }) => searchRecord(colName, JSON.stringify({ text, top_k })),
   });
+
+  // 设定
 
   return {
     add,
