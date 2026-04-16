@@ -77,7 +77,7 @@ export const usePagingStore = create<PagingStore>()(
           ...state.paging,
           [key]: {
             ...(state.paging[key] ?? initialItem),
-            order_by,
+            order_by: !!direction ? order_by : '',
             direction,
           },
         },

@@ -21,8 +21,9 @@ import { useUserAction } from '@/hooks/use-user';
 import { UserInfo } from '@/types/user';
 
 
-export function DeleteUserDialog({ info }: {
+export function DeleteUserDialog({ info, disabled }: {
   info: UserInfo
+  disabled: boolean
 }) {
 
   const { remove, checkPage } = useUserAction();
@@ -45,7 +46,8 @@ export function DeleteUserDialog({ info }: {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+        <Button disabled={disabled} variant="ghost" size="sm"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive">
           <Trash2Icon className="h-4 w-4"/>
         </Button>
       </AlertDialogTrigger>

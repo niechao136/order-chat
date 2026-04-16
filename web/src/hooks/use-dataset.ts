@@ -94,7 +94,8 @@ export function useRecordList(name: string, params?: PageParams) {
   const query = useQuery({
     queryKey: datasetKeys.recordList(name, params),
     queryFn: () => getRecordList(name, params),
-    enabled: !!name
+    enabled: !!name,
+    placeholderData: (previousData) => previousData
   });
 
   useEffect(() => {
@@ -149,9 +150,8 @@ export function useRecordActions(colName: string) {
     const data = await getRecordCount(colName);
     const total = data?.data || 0;
     const totalPage = Math.ceil(total / size) || 1;
-    if (page > totalPage) {
-      setPage(pagingKey, totalPage);
-    }
+    const cur = page > totalPage ? totalPage : page;
+    setPage(pagingKey, cur);
   };
 
   // 新增

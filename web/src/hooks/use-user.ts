@@ -22,7 +22,7 @@ export const userKeys = {
   all: [ 'user' ] as const,
   lists: () => [ ...userKeys.all, 'list' ] as const,
   list: (params?: PageParams) => [ ...userKeys.lists(), params ] as const,
-  count: () => [ ...userKeys.all, 'count' ] as const,
+  count: () => [ ...userKeys.lists(), 'count' ] as const,
   owner: () => [ ...userKeys.all, 'owner' ] as const,
   details: () => [ ...userKeys.all, 'detail' ] as const,
   detail: (id: string) => [ ...userKeys.details(), id ] as const,
@@ -41,7 +41,8 @@ export function useUserList(params?: PageParams) {
 
   const query = useQuery({
     queryKey: userKeys.list(params),
-    queryFn: () => getUserList(params)
+    queryFn: () => getUserList(params),
+    placeholderData: (previousData) => previousData
   });
 
   useEffect(() => {
@@ -99,9 +100,8 @@ export function useUserAction() {
     });
     const total = await fetchCount();
     const totalPage = Math.ceil((total || 0) / size) || 1;
-    if (page > totalPage) {
-      setPage(pagingKey, totalPage);
-    }
+    const cur = page > totalPage ? totalPage : page;
+    setPage(pagingKey, cur);
   };
 
   const add = useMutation({

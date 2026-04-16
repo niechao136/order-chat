@@ -43,8 +43,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function ResetUserDialog({ info }: {
+export function ResetUserDialog({ info, disabled }: {
   info: UserInfo
+  disabled: boolean
 }) {
 
   const { change } = useUserAction();
@@ -78,7 +79,7 @@ export function ResetUserDialog({ info }: {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon"
+        <Button variant="ghost" size="icon" disabled={disabled}
                 className="h-8 w-8 text-muted-foreground hover:text-primary">
           <RotateCcwKeyIcon className="h-4 w-4"/>
         </Button>

@@ -55,8 +55,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 
-export function EditUserDialog({ info }: {
+export function EditUserDialog({ info, disabled }: {
   info: UserInfo
+  disabled: boolean
 }) {
 
   const { update, jumpToFirst } = useUserAction();
@@ -79,6 +80,7 @@ export function EditUserDialog({ info }: {
 
   const onSubmit = async (values: FormValues) => {
     const req = {
+      username: values.username,
       email: values.email,
       role: values.role,
     }
@@ -142,6 +144,7 @@ export function EditUserDialog({ info }: {
                 name={'role'}
                 render={({ field }) => (
                   <Select
+                    disabled={disabled}
                     value={field.value}
                     onValueChange={field.onChange}
                   >

@@ -22,6 +22,7 @@ class UserAdd(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    username: str
     email: Optional[str] = None
     role: UserRole
 

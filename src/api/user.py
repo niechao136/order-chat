@@ -30,11 +30,15 @@ async def user_list(params: PageParams = Depends(), _: TokenDict = Depends(get_c
         row = await cur.fetchone()
         total = row.get("count") if isinstance(row, dict) else row[0]
 
-        sort_field = params.order_by if params.order_by in ["created_at", "username"] else "id"
+        allowed_directions = {"asc", "desc"}
+        direction = params.direction.lower()
+        if direction not in allowed_directions:
+            direction = "desc"
+        sort_field = params.order_by if params.order_by in ["username", "email", "role", "updated_at"] else "id"
         final_query = f"""
                 SELECT id, username, email, role, created_at, updated_at 
                 {base_query}
-                ORDER BY {sort_field} {params.direction}
+                ORDER BY {sort_field} {direction}
                 LIMIT %s OFFSET %s
                 """
         args.extend([params.size, params.offset])
@@ -188,7 +192,7 @@ async def delete_user(req: UserDel, _: TokenDict = Depends(get_current_admin)):
                 (target_ids,)
             )
             rows = await cur.fetchall()
-            deleted_ids = [row[0] for row in rows]
+            deleted_ids = [str(row.get("id")) if isinstance(row, dict) else str(row[0]) for row in rows]
 
             if not deleted_ids:
                 return DataResult(status=0, msg="No active users found to delete", data=None)

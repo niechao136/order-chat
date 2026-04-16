@@ -8,7 +8,7 @@ class PageParams(BaseModel):
     size: int = Field(10, ge=1, le=100, description="每页条数")
 
     # --- 排序 ---
-    order_by: Optional[str] = Field(None, description="排序字段，如 'created_at'")
+    order_by: Optional[str] = Field(None, description="排序字段，如 'updated_at'")
     direction: Literal["asc", "desc"] = Field("desc", description="排序方向")
 
     # --- 搜索 ---

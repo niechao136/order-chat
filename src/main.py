@@ -59,11 +59,19 @@ if __name__ == "__main__":
     )
     server = uvicorn.Server(config)
 
-    # 2. 暴力启动方案：
+    # 暴力启动方案：
     # 如果 sys.platform == 'win32'，确保我们手动运行 loop
     if sys.platform == 'win32':
         loop = asyncio.SelectorEventLoop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(server.serve())
+        try:
+            loop.run_until_complete(server.serve())
+        except KeyboardInterrupt:
+            print("\nShutdown gracefully.")
+            # 直接退出进程
+            sys.exit(0)
+        finally:
+            # 显式关闭事件循环
+            loop.close()
     else:
         server.run()

@@ -30,7 +30,7 @@ import { DeleteUserDialog } from '@/components/admin/delete-user';
 import { EditUserDialog } from '@/components/admin/edit-user';
 import { ResetUserDialog } from '@/components/admin/reset-user';
 
-import { useUserList, useUserAction, useUserCount } from '@/hooks/use-user';
+import { useUserList, useUserAction, useUserCount, useOwner } from '@/hooks/use-user';
 import { usePagingStore } from '@/stores/paging';
 import { formatTimeStr } from '@/utils/time';
 
@@ -60,12 +60,12 @@ export default function UserPage() {
 
   const { data, isLoading } = useUserList(params);
   const { data: total } = useUserCount();
+  const { data: owner } = useOwner();
   const { remove, checkPage } = useUserAction();
 
-  const debouncedSetSearch = useMemo(
-    () => debounce((value: string) => setSearch(pagingKey, value), 500),
-    [setSearch, pagingKey]
-  );
+  const debouncedSetSearch = useMemo(() => {
+    return debounce((value: string) => setSearch(pagingKey, value), 500)
+  }, [ setSearch, pagingKey ]);
 
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -108,6 +108,10 @@ export default function UserPage() {
   };
 
   const sortableHeaderClass = "cursor-pointer select-none hover:bg-muted/50 transition-colors";
+
+  const allowCheck = useMemo(() => {
+    return (data?.data ?? []).filter(o => o.id !== owner?.id).map(r => r.id)
+  }, [data, owner]);
 
   const batchDel = () => {
     remove.mutate(selectedIds, {
@@ -157,8 +161,9 @@ export default function UserPage() {
                 <TableRow>
                   <TableHead className="w-[48px] text-center">
                     <Checkbox
-                      checked={selectedIds.length > 0 && selectedIds.length === data?.data.length}
-                      onCheckedChange={() => setSelectedIds(selectedIds.length === data?.data.length ? [] : data?.data.map(r => r.id) ?? [])}
+                      disabled={allowCheck.length === 0}
+                      checked={selectedIds.length > 0 && selectedIds.length === allowCheck.length}
+                      onCheckedChange={() => setSelectedIds(selectedIds.length === allowCheck.length ? [] : allowCheck)}
                     />
                   </TableHead>
                   <TableHead className={sortableHeaderClass} onClick={() => handleSort('username')}>
@@ -201,6 +206,7 @@ export default function UserPage() {
                     <TableRow key={user.id} className="group hover:bg-muted/30 transition-colors">
                       <TableCell className="text-center">
                         <Checkbox
+                          disabled={owner?.id === user.id}
                           checked={selectedIds.includes(user.id)}
                           onCheckedChange={() => setSelectedIds(prev => prev.includes(user.id) ? prev.filter(i => i !== user.id) : [ ...prev, user.id ])}
                         />
@@ -211,9 +217,9 @@ export default function UserPage() {
                       <TableCell className="py-4">{formatTimeStr(user.updated_at)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <EditUserDialog info={user}/>
-                          <ResetUserDialog info={user}/>
-                          <DeleteUserDialog info={user}/>
+                          <EditUserDialog info={user} disabled={owner?.id === user.id}/>
+                          <ResetUserDialog info={user} disabled={owner?.id === user.id}/>
+                          <DeleteUserDialog info={user} disabled={owner?.id === user.id}/>
                         </div>
                       </TableCell>
                     </TableRow>
