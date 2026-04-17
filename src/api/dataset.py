@@ -281,7 +281,7 @@ async def replace_fields(name: str, req: List[FieldItem], db_pool = Depends(get_
         raise HTTPException(status_code=400, detail="Duplicate field names are not allowed")
 
     # 类型校验：确保 field_type 是支持的类型
-    allowed_types = {"string", "integer", "float", "boolean", "array", "object"}
+    allowed_types = {"string", "number", "boolean", "array", "object"}
     for item in req:
         if item.field_type not in allowed_types:
             raise HTTPException(

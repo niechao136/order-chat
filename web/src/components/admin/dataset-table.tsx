@@ -25,14 +25,30 @@ import {
 import { AddItemDialog } from '@/components/admin/add-item';
 import { ClearDatasetDialog } from '@/components/admin/clear-dataset';
 import { DeleteItemDialog } from '@/components/admin/delete-item';
+import { DownloadTemplate } from '@/components/admin/download-template';
 import { EditItemDialog } from '@/components/admin/edit-item';
+import { ManageFieldsDialog } from '@/components/admin/manage-field';
 import { UploadItem } from '@/components/admin/upload-item';
 import { ViewItemDialog } from '@/components/admin/view-item';
 import { TablePaging } from '@/components/base/pagination';
 
-import { useRecordList, useRecordActions } from '@/hooks/use-dataset';
+import { useRecordList, useRecordField, useRecordActions } from '@/hooks/use-dataset';
 import { usePagingStore } from '@/stores/paging';
 import { formatTime } from '@/utils/time';
+
+
+function formatFieldValue(value: unknown, fieldType: string): string {
+  if (value === undefined || value === null) return '-';
+  switch (fieldType) {
+    case 'boolean':
+      return value ? '是' : '否';
+    case 'array':
+    case 'object':
+      return JSON.stringify(value);
+    default:
+      return String(value);
+  }
+}
 
 
 export function DatasetTable({ collection }: {
@@ -56,6 +72,15 @@ export function DatasetTable({ collection }: {
 
   const { data, isLoading } = useRecordList(collection, params);
   const { remove, checkPage } = useRecordActions(collection);
+  const { data: fields, isLoading: fieldsLoading } = useRecordField(collection);
+
+  // 过滤出需要在表格中显示的自定义字段（排除 content 和 updated_at）
+  const displayFields = useMemo(() => {
+    if (!fields) return [];
+    return fields.filter(
+      (f) => !['content', 'updated_at'].includes(f.field_name)
+    );
+  }, [fields]);
 
   const batchDel = () => {
     remove.mutate(selectedIds, {
@@ -79,8 +104,10 @@ export function DatasetTable({ collection }: {
             <CardDescription>管理当前知识库中的 {data?.total || 0} 条向量数据</CardDescription>
           </div>
           <div className="flex items-center gap-2">
+            <ManageFieldsDialog collection={collection} disabled={(data?.total || 0) > 0} />
             <AddItemDialog collection={collection} />
             <UploadItem collection={collection} />
+            <DownloadTemplate collection={collection} />
             <ClearDatasetDialog collection={collection} />
           </div>
         </CardHeader>
@@ -95,17 +122,23 @@ export function DatasetTable({ collection }: {
                       onCheckedChange={() => setSelectedIds(selectedIds.length === data?.data.length ? [] : data?.data.map(r => r.id) ?? [])}
                     />
                   </TableHead>
-                  <TableHead>内容预览</TableHead>
+                  <TableHead>向量内容</TableHead>
+                  {/* 动态自定义字段列 */}
+                  {displayFields.map((field) => (
+                    <TableHead key={field.field_name}>
+                      {field?.description ?? field.field_name}
+                    </TableHead>
+                  ))}
                   <TableHead className="w-[140px]">更新时间</TableHead>
                   <TableHead className="w-[140px] text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
-                  <TableRow><TableCell colSpan={4} className="h-64 text-center">加载中...</TableCell></TableRow>
+                {isLoading || fieldsLoading ? (
+                  <TableRow><TableCell colSpan={4 + displayFields.length} className="h-64 text-center">加载中...</TableCell></TableRow>
                 ) : data?.data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-64 text-center">
+                    <TableCell colSpan={4 + displayFields.length} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center gap-2 opacity-50">
                         <DatabaseIcon className="h-8 w-8"/>
                         <p>暂无数据，请先新增向量</p>
@@ -128,6 +161,16 @@ export function DatasetTable({ collection }: {
                           </p>
                         </div>
                       </TableCell>
+                      {displayFields.map((field) => {
+                        const value = record.payload?.[field.field_name];
+                        return (
+                          <TableCell key={field.field_name} className="py-4">
+                            <span className="text-sm text-muted-foreground">
+                              {formatFieldValue(value, field.field_type)}
+                            </span>
+                          </TableCell>
+                        );
+                      })}
                       <TableCell className="py-4">{formatTime(record.payload.updated_at)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">

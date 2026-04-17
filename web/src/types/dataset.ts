@@ -1,3 +1,4 @@
+import * as z from 'zod';
 
 export interface ColDescr {
   name: string
@@ -31,8 +32,10 @@ export interface ScoredPoint {
 
 export interface FieldItem {
   field_name: string
-  field_type: string
+  field_type: 'string' | 'number' | 'boolean' | 'array' | 'object'
   is_required: boolean
   default_value?: unknown
   description?: string
 }
+
+export type CommonZod = z.ZodString | z.ZodNumber | z.ZodBoolean | z.ZodAny | z.ZodOptional | z.ZodPipe;

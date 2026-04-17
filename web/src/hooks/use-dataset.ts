@@ -166,6 +166,12 @@ export function useRecordActions(colName: string) {
     setPage(pagingKey, cur);
   };
 
+  const refreshField = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: datasetKeys.recordFields(colName)
+    });
+  }
+
   // 新增
   const add = useMutation({
     mutationFn: (body: string) => addRecord(colName, body),
@@ -209,7 +215,7 @@ export function useRecordActions(colName: string) {
 
   // 批量上传
   const upload = useMutation({
-    mutationFn: (body: FormData) => uploadRecord(colName, body),
+    mutationFn: (body: string) => uploadRecord(colName, body),
     onSuccess: async (res) => {
       if (res.status !== 1) {
         throw new Error(res?.msg);
@@ -225,7 +231,10 @@ export function useRecordActions(colName: string) {
     }) => searchRecord(colName, JSON.stringify({ text, top_k })),
   });
 
-  // 设定
+  // 设定栏位
+  const setField = useMutation({
+    mutationFn: (list: FieldItem[]) => setFieldList(colName, JSON.stringify(list)),
+  });
 
   return {
     add,
@@ -234,7 +243,9 @@ export function useRecordActions(colName: string) {
     clear,
     upload,
     search,
+    setField,
     jumpToLast,
     checkPage,
+    refreshField,
   };
 }

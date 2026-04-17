@@ -63,7 +63,7 @@ export async function addRecord(name: string, body: string) {
   return data
 }
 
-export async function uploadRecord(name: string, body: FormData) {
+export async function uploadRecord(name: string, body: string) {
   const res = await apiRequest(`dataset/${name}/item/upload`, {
     method: 'POST',
     body,

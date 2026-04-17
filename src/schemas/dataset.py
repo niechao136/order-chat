@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 
 
 class CollectionAdd(BaseModel):
@@ -34,7 +34,7 @@ class ItemSearch(BaseModel):
 
 class FieldItem(BaseModel):
     field_name: str
-    field_type: str
+    field_type: Literal["string", "number", "boolean", "array", "object"]
     is_required: bool = False
     default_value: Optional[Any] = None
     description: Optional[str] = None
