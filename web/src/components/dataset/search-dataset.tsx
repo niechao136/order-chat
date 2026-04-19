@@ -15,8 +15,10 @@ import {
 } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 
-import { useRecordActions } from '@/hooks/use-dataset';
-import { ScoredPoint } from '@/types/dataset';
+import { FilterBuilder } from '@/components/dataset/filter-builder';
+
+import { useRecordField, useRecordActions } from '@/hooks/use-dataset';
+import { ScoredPoint, FilterCondition, FieldItem, FieldType } from '@/types/dataset';
 
 
 export function SearchDataset({ collection }: {
@@ -24,17 +26,27 @@ export function SearchDataset({ collection }: {
 }) {
 
   const { search } = useRecordActions(collection);
+  const { data: fieldList = [] } = useRecordField(collection);
+
+  // 构建字段名数组和类型映射
+  const fieldNames = fieldList.map((f: FieldItem) => f.field_name);
+  const fieldTypes = fieldList.reduce<Record<string, FieldType>>((acc, f) => {
+    acc[f.field_name] = f.field_type;
+    return acc;
+  }, {});
 
   const [ text, setText ] = useState('');
   const [ topK, setTopK ] = useState(5);
   const [ result, setResult ] = useState<ScoredPoint[]>([]);
   const [ searched, setSearched ] = useState(false);
+  const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
 
   const handleReset = () => {
     setText('');
     setTopK(3);
     setResult([]);
     setSearched(false);
+    setFilterConditions([]);
   };
 
   const testSearch = () => {
@@ -43,7 +55,9 @@ export function SearchDataset({ collection }: {
       return;
     }
 
-    search.mutate({ text, top_k: topK }, {
+    const filters = filterConditions.filter(c => c.field.trim() !== '');
+
+    search.mutate({ text, top_k: topK, filters }, {
       onSuccess: (res) => {
         setResult(res.data);
         setSearched(true);
@@ -102,9 +116,19 @@ export function SearchDataset({ collection }: {
             step={1}
             className="w-full max-w-xs"
           />
-          <span className="text-sm font-semibold text-primary min-w-[2rem] text-center">
+          <span className="text-sm font-semibold text-primary min-w-8 text-center">
             {topK}
           </span>
+        </div>
+
+        {/* 筛选条件构建器 */}
+        <div className="shrink-0 border rounded-lg p-4 bg-muted/20">
+          <FilterBuilder
+            availableFields={fieldNames}
+            conditions={filterConditions}
+            fieldTypes={fieldTypes}
+            onChange={setFilterConditions}
+          />
         </div>
 
         {/* 结果展示区 */}

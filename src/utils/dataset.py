@@ -1,7 +1,7 @@
 import json
 from fastapi import HTTPException
 from typing import Any, Dict, List, Optional
-from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny, Range
+from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny, Range, MatchText, PayloadSchemaType
 
 from src.database.postgre import get_db_pool
 from src.schemas.dataset import FilterCondition
@@ -82,31 +82,62 @@ async def validate_and_fill_metadata(
 
 
 def build_qdrant_filter(conditions: List[FilterCondition]) -> Optional[Filter]:
-    """将自定义条件列表转换为 Qdrant Filter 对象"""
     if not conditions:
         return None
 
-    must_conditions = []
+    must = []
+    must_not = []
+
     for cond in conditions:
         field_key = cond.field
         op = cond.operator
         val = cond.value
 
         if op == "eq":
-            must_conditions.append(FieldCondition(key=field_key, match=MatchValue(value=val)))
+            must.append(FieldCondition(key=field_key, match=MatchValue(value=val)))
         elif op == "ne":
-            # Qdrant 不直接支持 ne，可通过 must_not 实现，此处简化为暂不支持或转成其他方式
-            # 这里为了演示，我们抛出不支持异常
-            raise HTTPException(status_code=400, detail="Operator 'ne' not yet supported")
+            must_not.append(FieldCondition(key=field_key, match=MatchValue(value=val)))
         elif op in ("gt", "gte", "lt", "lte"):
             range_params = {op: val}
-            must_conditions.append(FieldCondition(key=field_key, range=Range(**range_params)))
+            must.append(FieldCondition(key=field_key, range=Range(**range_params)))
         elif op == "in":
-            must_conditions.append(FieldCondition(key=field_key, match=MatchAny(any=val)))
+            must.append(FieldCondition(key=field_key, match=MatchAny(any=val)))
         elif op == "nin":
-            # 类似 ne，暂不支持
-            raise HTTPException(status_code=400, detail="Operator 'nin' not yet supported")
+            must_not.append(FieldCondition(key=field_key, match=MatchAny(any=val)))
+        elif op == "like":
+            # 注意：需要 collection 中对 field_key 开启全文索引，否则此处可能报错
+            must.append(FieldCondition(key=field_key, match=MatchText(text=str(val))))
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported operator: {op}")
 
-    return Filter(must=must_conditions)
+    return Filter(must=must, must_not=must_not)
+
+
+async def get_qdrant_index_params(
+    field_type: str
+):
+    """
+    根据业务字段类型返回对应的 Qdrant 索引参数。
+    可根据实际需求调整默认行为。
+    """
+    if field_type == "string":
+        # 默认为字符串字段创建 Keyword 索引（精确匹配）
+        return PayloadSchemaType.KEYWORD
+        # 如果需要全文搜索，可改为 TextIndexParams
+        # return qdrant_models.TextIndexParams(tokenizer="word", min_token_len=2)
+
+    elif field_type == "number":
+        # 统一使用 FloatIndex，兼容整数与浮点数
+        return PayloadSchemaType.FLOAT
+
+    elif field_type == "boolean":
+        return PayloadSchemaType.BOOL
+
+    elif field_type == "array":
+        # 数组无法直接建索引，通常需要对数组内元素字段建索引
+        # 这里简单处理：不自动创建，由调用方在定义中额外指定内部字段
+        return None
+
+    else:
+        # object 或未知类型不创建索引
+        return None

@@ -22,7 +22,7 @@ import {
 } from '@/services/dataset';
 import { usePagingStore } from '@/stores/paging';
 import { PageParams } from '@/types/api';
-import { FieldItem } from '@/types/dataset';
+import { FieldItem, FilterCondition } from '@/types/dataset';
 
 
 export const datasetKeys = {
@@ -225,10 +225,11 @@ export function useRecordActions(colName: string) {
 
   // 检索测试
   const search = useMutation({
-    mutationFn: ({ text, top_k }: {
+    mutationFn: ({ text, top_k, filters }: {
       text: string;
       top_k: number;
-    }) => searchRecord(colName, JSON.stringify({ text, top_k })),
+      filters: FilterCondition[]
+    }) => searchRecord(colName, JSON.stringify({ text, top_k, filters })),
   });
 
   // 设定栏位

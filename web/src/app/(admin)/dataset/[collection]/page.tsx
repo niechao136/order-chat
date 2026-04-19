@@ -12,8 +12,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 
-import { DatasetTable } from '@/components/admin/dataset-table';
-import { SearchDataset } from '@/components/admin/search-dataset';
+import { DatasetTable } from '@/components/dataset/dataset-table';
+import { SearchDataset } from '@/components/dataset/search-dataset';
 
 
 export default function DatasetDetailPage() {

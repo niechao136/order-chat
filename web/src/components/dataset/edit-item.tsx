@@ -20,7 +20,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from "@/components/ui/textarea";
 
-import { renderFieldInput } from '@/components/admin/add-item';
+import { renderFieldInput } from '@/components/dataset/add-item';
 
 import { useRecordField, useRecordActions } from '@/hooks/use-dataset';
 import { cn } from '@/lib/utils';

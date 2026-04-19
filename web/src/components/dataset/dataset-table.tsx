@@ -22,14 +22,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { AddItemDialog } from '@/components/admin/add-item';
-import { ClearDatasetDialog } from '@/components/admin/clear-dataset';
-import { DeleteItemDialog } from '@/components/admin/delete-item';
-import { DownloadTemplate } from '@/components/admin/download-template';
-import { EditItemDialog } from '@/components/admin/edit-item';
-import { ManageFieldsDialog } from '@/components/admin/manage-field';
-import { UploadItem } from '@/components/admin/upload-item';
-import { ViewItemDialog } from '@/components/admin/view-item';
+import { AddItemDialog } from '@/components/dataset/add-item';
+import { ClearDatasetDialog } from '@/components/dataset/clear-dataset';
+import { DeleteItemDialog } from '@/components/dataset/delete-item';
+import { DownloadTemplate } from '@/components/dataset/download-template';
+import { EditItemDialog } from '@/components/dataset/edit-item';
+import { ManageFieldsDialog } from '@/components/dataset/manage-field';
+import { UploadItem } from '@/components/dataset/upload-item';
+import { ViewItemDialog } from '@/components/dataset/view-item';
 import { TablePaging } from '@/components/base/pagination';
 
 import { useRecordList, useRecordField, useRecordActions } from '@/hooks/use-dataset';
@@ -41,7 +41,7 @@ function formatFieldValue(value: unknown, fieldType: string): string {
   if (value === undefined || value === null) return '-';
   switch (fieldType) {
     case 'boolean':
-      return value ? '是' : '否';
+      return value ? 'true' : 'false';
     case 'array':
     case 'object':
       return JSON.stringify(value);

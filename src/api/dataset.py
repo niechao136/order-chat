@@ -18,7 +18,7 @@ from src.dataset.embedding import get_embedding_async, get_embeddings_async_batc
 from src.dataset.qdrant import get_qdrant_client_async
 from src.schemas.dataset import CollectionAdd, ItemSearch, ItemAdd, ItemUpdate, ItemDelete, FieldItem
 from src.schemas.page import NoPageResult, DataResult, PageResult, PageParams
-from src.utils.dataset import validate_and_fill_metadata, build_qdrant_filter
+from src.utils.dataset import validate_and_fill_metadata, build_qdrant_filter, get_qdrant_index_params
 from src.utils.jwt import get_current_admin
 from src.utils.uuid import generate_timestamp_uuid
 
@@ -129,12 +129,12 @@ async def add_item(
         req: ItemAdd,
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
-    validated_metadata = await validate_and_fill_metadata(name, metadata=[req.metadata])
+    validated_metadata = await validate_and_fill_metadata(name, metadata=[req.metadata or {}])
     vector = await get_embedding_async(text=req.content)
     ms_timestamp = int(time.time() * 1000)
     uu_id = generate_timestamp_uuid(ms_timestamp)
     payload = {
-        "content": req.text,
+        "content": req.content,
         "updated_at": ms_timestamp,
         **validated_metadata[0]
     }
@@ -150,7 +150,7 @@ async def upload_item(
         req: List[ItemAdd],
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
-    metadata = [item.metadata for item in req]
+    metadata = [item.metadata or {} for item in req]
     validated_metadata = await validate_and_fill_metadata(name, metadata)
 
     texts = [item.content for item in req]
@@ -186,12 +186,12 @@ async def update_item(
         req: ItemUpdate,
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
-    validated_metadata = await validate_and_fill_metadata(name, metadata=[req.metadata])
+    validated_metadata = await validate_and_fill_metadata(name, metadata=[req.metadata or {}])
     vector = await get_embedding_async(text=req.content)
     ms_timestamp = int(time.time() * 1000)
     uu_id = generate_timestamp_uuid(ms_timestamp)
     payload = {
-        "content": req.text,
+        "content": req.content,
         "updated_at": ms_timestamp,
         **validated_metadata[0]
     }
@@ -274,7 +274,12 @@ async def list_fields(name: str, db_pool = Depends(get_db_pool)):
 
 
 @dataset_router.post("/{name}/fields", response_model=DataResult[str])
-async def replace_fields(name: str, req: List[FieldItem], db_pool = Depends(get_db_pool)):
+async def replace_fields(
+        name: str,
+        req: List[FieldItem],
+        db_pool = Depends(get_db_pool),
+        client: AsyncQdrantClient = Depends(get_qdrant_client_async)
+):
     # 基础校验：字段名不能重复
     field_names = [item.field_name for item in req]
     if len(field_names) != len(set(field_names)):
@@ -319,5 +324,33 @@ async def replace_fields(name: str, req: List[FieldItem], db_pool = Depends(get_
                         item.description
                     )
                 )
+
+    # 获取当前集合的所有 payload 索引
+    info = await client.get_collection(collection_name=name)
+    existing_indexes = info.payload_schema or {}
+
+    # 删除所有已存在的索引
+    for field_name in existing_indexes.keys():
+        await client.delete_payload_index(
+            collection_name=name,
+            field_name=field_name,
+            wait=True
+        )
+
+    # 根据新字段定义创建索引
+    for item in req:
+        field_name = item.field_name
+        field_type = item.field_type
+
+        # 根据类型映射 Qdrant 索引参数
+        index_params = await get_qdrant_index_params(field_type)
+
+        if index_params is not None:
+            await client.create_payload_index(
+                collection_name=name,
+                field_name=field_name,
+                field_schema=index_params,
+                wait=True
+            )
 
     return DataResult(status=1, msg=None, data=name)

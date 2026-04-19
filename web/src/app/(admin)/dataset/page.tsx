@@ -20,8 +20,8 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { AddDatasetDialog } from '@/components/admin/add-dataset';
-import { DeleteDatasetDialog } from '@/components/admin/delete-dataset';
+import { AddDatasetDialog } from '@/components/dataset/add-dataset';
+import { DeleteDatasetDialog } from '@/components/dataset/delete-dataset';
 
 import { useColList } from '@/hooks/use-dataset';
 

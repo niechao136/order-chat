@@ -25,10 +25,10 @@ import {
 } from '@/components/ui/table';
 
 import { TablePaging } from '@/components/base/pagination';
-import { AddUserDialog } from '@/components/admin/add-user';
-import { DeleteUserDialog } from '@/components/admin/delete-user';
-import { EditUserDialog } from '@/components/admin/edit-user';
-import { ResetUserDialog } from '@/components/admin/reset-user';
+import { AddUserDialog } from '@/components/user/add-user';
+import { DeleteUserDialog } from '@/components/user/delete-user';
+import { EditUserDialog } from '@/components/user/edit-user';
+import { ResetUserDialog } from '@/components/user/reset-user';
 
 import { useUserList, useUserAction, useUserCount, useOwner } from '@/hooks/use-user';
 import { usePagingStore } from '@/stores/paging';
