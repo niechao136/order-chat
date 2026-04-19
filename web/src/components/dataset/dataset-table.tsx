@@ -50,6 +50,17 @@ function formatFieldValue(value: unknown, fieldType: string): string {
   }
 }
 
+export const getColumnWidthClass = (fieldType: string): string => {
+  switch (fieldType) {
+    case 'string': return 'w-64';
+    case 'number': return 'w-24';
+    case 'boolean': return 'w-20';
+    case 'array':
+    case 'object': return 'w-40';
+    default: return 'w-40';
+  }
+};
+
 
 export function DatasetTable({ collection }: {
   collection: string
@@ -116,7 +127,7 @@ export function DatasetTable({ collection }: {
             <Table className="table-fixed w-full">
               <TableHeader className="bg-muted/50 sticky top-0 z-10">
                 <TableRow>
-                  <TableHead className="w-[48px] text-center">
+                  <TableHead className="w-12 text-center">
                     <Checkbox
                       checked={selectedIds.length > 0 && selectedIds.length === data?.data.length}
                       onCheckedChange={() => setSelectedIds(selectedIds.length === data?.data.length ? [] : data?.data.map(r => r.id) ?? [])}
@@ -125,12 +136,12 @@ export function DatasetTable({ collection }: {
                   <TableHead>向量内容</TableHead>
                   {/* 动态自定义字段列 */}
                   {displayFields.map((field) => (
-                    <TableHead key={field.field_name}>
+                    <TableHead key={field.field_name} className={getColumnWidthClass(field.field_type)}>
                       {field?.description ?? field.field_name}
                     </TableHead>
                   ))}
-                  <TableHead className="w-[140px]">更新时间</TableHead>
-                  <TableHead className="w-[140px] text-right">操作</TableHead>
+                  <TableHead className="w-35">更新时间</TableHead>
+                  <TableHead className="w-35 text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -164,7 +175,7 @@ export function DatasetTable({ collection }: {
                       {displayFields.map((field) => {
                         const value = record.payload?.[field.field_name];
                         return (
-                          <TableCell key={field.field_name} className="py-4">
+                          <TableCell key={field.field_name} className={getColumnWidthClass(field.field_type)}>
                             <span className="text-sm text-muted-foreground">
                               {formatFieldValue(value, field.field_type)}
                             </span>

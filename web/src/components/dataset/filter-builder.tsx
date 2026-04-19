@@ -44,7 +44,7 @@ export const OPERATOR_LABELS: Record<FilterOperator, string> = {
 export function FilterBuilder({ conditions, onChange, availableFields = [], fieldTypes = {} }: FilterBuilderProps) {
 
   const addCondition = () => {
-    onChange(conditions.concat([{ field: '', op: 'eq', value: '' }]));
+    onChange(conditions.concat([{ field: '', operator: 'eq', value: '' }]));
   };
 
   const removeCondition = (index: number) => {
@@ -62,7 +62,7 @@ export function FilterBuilder({ conditions, onChange, availableFields = [], fiel
     if (updates.field !== undefined && updates.field !== oldCond.field) {
       const fieldType = fieldTypes[updates.field];
       const allowedOps = fieldType ? OPERATOR_FOR_TYPE[fieldType] : [];
-      newCond.op = allowedOps[0] || 'eq';
+      newCond.operator = allowedOps[0] || 'eq';
       newCond.value = fieldType === 'boolean' ? false : '';
     }
 
@@ -158,8 +158,8 @@ export function FilterBuilder({ conditions, onChange, availableFields = [], fiel
 
                 {/* 操作符下拉（根据字段类型过滤） */}
                 <Select
-                  value={cond.op}
-                  onValueChange={(v) => updateCondition(idx, { op: v as FilterOperator })}
+                  value={cond.operator}
+                  onValueChange={(v) => updateCondition(idx, { operator: v as FilterOperator })}
                 >
                   <SelectTrigger className="w-32">
                     <SelectValue/>

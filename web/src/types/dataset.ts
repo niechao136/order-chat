@@ -48,6 +48,6 @@ export type FilterOperator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 
 // 单个筛选条件
 export interface FilterCondition {
   field: string;
-  op: FilterOperator;
+  operator: FilterOperator;
   value: unknown;
 }
