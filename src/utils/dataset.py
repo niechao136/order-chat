@@ -10,9 +10,7 @@ from src.schemas.dataset import FilterCondition
 def check_field_type(value: Any, expected_type: str) -> bool:
     if expected_type == "string":
         return isinstance(value, str)
-    elif expected_type == "integer":
-        return isinstance(value, int)
-    elif expected_type == "float":
+    elif expected_type == "number":
         return isinstance(value, (int, float))
     elif expected_type == "boolean":
         return isinstance(value, bool)
