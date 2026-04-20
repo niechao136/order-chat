@@ -35,7 +35,7 @@ async def intent_node(state: AgentState, config: RunnableConfig):
     response = await llm_with_intent.ainvoke([sys_msg] + state.messages, config)
     res = cast(IntentSchema, response)
 
-    return {"messages": [], "intent": res.intent}
+    return {"intent": res.intent}
 
 
 async def search_node(state: AgentState, config: RunnableConfig):
@@ -62,7 +62,7 @@ async def cart_node(state: AgentState, config: RunnableConfig):
 
     new_cart = update_cart(state.cart, res)
 
-    return {"messages": [], "cart": new_cart}
+    return {"cart": new_cart}
 
 
 async def format_node(state: AgentState, config: RunnableConfig):
