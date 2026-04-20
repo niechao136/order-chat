@@ -32,7 +32,7 @@ class OutputProduct(BaseModel):
     id: str = Field(description="商品ID")
     name: str = Field(description="商品名称")
     price: float = Field(description="商品价格")
-    options: OptionItem = Field(description="商品所选规格")
+    options: List[OptionItem] = Field(description="商品所选规格")
 
 
 class OutputSchema(BaseModel):

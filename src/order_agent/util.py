@@ -63,7 +63,7 @@ def format_product(content: str) -> ProductItem:
                 value=opt_value,
                 id=opt_id,
                 price=opt_price,
-                index=idx
+                index=favor_key
             )
             options.append(option_item)
 
