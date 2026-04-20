@@ -1,5 +1,6 @@
 from typing import List, Any, cast
 
+from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.types import Command
@@ -63,7 +64,8 @@ async def no_search():
 
 @tool
 async def change_cart(
-        ops: ChangeSchema
+        ops: ChangeSchema,
+        config: RunnableConfig = None
 ):
     """
     操作订单（新增/删除商品）。修改操作需先删除旧商品，再新增新商品。
@@ -108,8 +110,34 @@ async def change_cart(
 
         return new_cart
 
+    def _summarize_ops(op: ChangeSchema) -> str:
+        adds = []
+        deletes = []
+        for item in op.ops:
+            prod = item.product
+            spec = f"({','.join(opt.value for opt in prod.selected)})" if prod.selected else ""
+            if item.action == "add":
+                adds.append(f"{prod.name}{spec} x{prod.quantity}")
+            else:
+                deletes.append(f"{prod.name}{spec}")
+        msgs = []
+        if adds:
+            msgs.append(f"已添加: {', '.join(adds)}")
+        if deletes:
+            msgs.append(f"已移除: {', '.join(deletes)}")
+        return "; ".join(msgs) if msgs else "订单无变化"
+
+    # 生成工具执行结果描述
+    summary = _summarize_ops(ops)
+
+    # 关键：从 config 中获取 tool_call_id
+    tool_call_id = config.get("configurable", {}).get("tool_call_id") if config else None
+
     return Command(
-        update={"cart": update_cart}
+        update={
+            "cart": update_cart,
+            "messages": [ToolMessage(content=summary, tool_call_id=tool_call_id)]
+        }
     )
 
 
