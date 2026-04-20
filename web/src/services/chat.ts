@@ -81,10 +81,13 @@ export async function sendMessage(
         const parsed = JSON.parse(data);
         const content = parsed.content;
         const node = parsed.node;
-        if (Array.isArray(content)) {
-          onChunk(content[0]?.text ?? '', node);
-        } else if (typeof content === 'string') {
-          onChunk(content, node);
+        const type = parsed.type;
+        if (type === 'ai') {
+          if (Array.isArray(content)) {
+            onChunk(content[0]?.text ?? '', node);
+          } else if (typeof content === 'string') {
+            onChunk(content, node);
+          }
         }
       } catch (e) {
         console.error("解析 SSE 数据失败", e);

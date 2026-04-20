@@ -122,7 +122,7 @@ async def send_message_stream(graph: str, thread_id: str, req: ChatReq):
             # metadata 中包含 langgraph_node，可以用来判断当前是哪个节点在说话
             if isinstance(msg, BaseMessageChunk):
                 # 按照 SSE 规范格式化：data: <内容>\n\n
-                yield f"data: {json.dumps({'content': msg.content, 'node': metadata.get('langgraph_node')})}\n\n"
+                yield f"data: {json.dumps({'content': msg.content, 'type': msg.type, 'node': metadata.get('langgraph_node')})}\n\n"
 
         # 结束后发送一个特定的标记，方便前端关闭连接
         yield "data: [DONE]\n\n"
