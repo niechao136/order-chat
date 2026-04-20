@@ -58,7 +58,7 @@ async def format_node(state: AgentState, config: RunnableConfig):
     response = await llm_with_format.ainvoke([sys_msg] + state.messages, config)
     content = response.model_dump_json()
     cart = state.cart
-    if response.get("is_finish", False):
+    if response.is_finish:
         cart = []
     return {"messages": [AIMessage(content=content)], "cart": cart}
 
