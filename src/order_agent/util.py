@@ -1,7 +1,7 @@
 import re
 from typing import List
 
-from src.schemas.order_chat import ProductItem, OptionItem
+from src.schemas.order_chat import ProductItem, OptionItem, OperatorSchema
 
 
 def format_product(content: str) -> ProductItem:
@@ -31,6 +31,7 @@ def format_product(content: str) -> ProductItem:
                         key=lambda x: int(x.replace('favor', '')) if x.replace('favor', '').isdigit() else 999)
 
     for favor_key in favor_keys:
+        index = int(favor_key.replace('favor', ''))
         favor_value = data[favor_key]
         # 格式示例: "熟度:[id1:全熟:0;id2:七分熟:0]"
         # 使用正则提取组名和选项内容
@@ -63,7 +64,7 @@ def format_product(content: str) -> ProductItem:
                 value=opt_value,
                 id=opt_id,
                 price=opt_price,
-                index=favor_key
+                index=index
             )
             options.append(option_item)
 
@@ -78,3 +79,40 @@ def format_product(content: str) -> ProductItem:
     )
 
     return product
+
+
+def selected_equal(sel1: List[OptionItem], sel2: List[OptionItem]) -> bool:
+    """比较两个 selected 列表是否包含相同规格（基于 ID 集合）"""
+    ids1 = {opt.id for opt in sel1}
+    ids2 = {opt.id for opt in sel2}
+    return ids1 == ids2
+
+
+def update_cart(old_cart: List[ProductItem], ops: OperatorSchema) -> List[ProductItem]:
+    new_cart = [item.model_copy(deep=True) for item in old_cart]  # 深拷贝避免副作用
+
+    for change_item in ops.ops:
+        action = change_item.action
+        product = change_item.product
+
+        if action == "add":
+            # 查找是否已存在相同商品（ID 相同且 selected 规格组合相同）
+            matched = False
+            for cart_item in new_cart:
+                if cart_item.id == product.id and selected_equal(cart_item.selected, product.selected):
+                    # 规格组合相同，合并数量
+                    cart_item.quantity += product.quantity
+                    matched = True
+                    break
+            if not matched:
+                # 直接新增
+                new_cart.append(product.model_copy(deep=True))
+
+        elif action == "delete":
+            # 移除匹配 ID 且 selected 相同的商品
+            new_cart = [
+                item for item in new_cart
+                if not (item.id == product.id and selected_equal(item.selected, product.selected))
+            ]
+
+    return new_cart
