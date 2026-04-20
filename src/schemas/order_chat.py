@@ -43,4 +43,4 @@ class OutputSchema(BaseModel):
 
 class AgentState(BaseModel):
     messages: Annotated[List[BaseMessage], add_messages]
-    cart: List[ProductItem]
+    cart: List[ProductItem] = Field(default_factory=list)
