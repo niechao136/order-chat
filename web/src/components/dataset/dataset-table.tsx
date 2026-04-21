@@ -1,6 +1,6 @@
 'use client';
 
-import { DatabaseIcon, Trash2Icon } from 'lucide-react';
+import { DatabaseIcon, DownloadIcon, Loader2 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -23,10 +23,12 @@ import {
 } from '@/components/ui/table';
 
 import { AddItemDialog } from '@/components/dataset/add-item';
+import { BatchDeleteItem } from '@/components/dataset/batch-delete-item';
 import { ClearDatasetDialog } from '@/components/dataset/clear-dataset';
 import { DeleteItemDialog } from '@/components/dataset/delete-item';
 import { DownloadTemplate } from '@/components/dataset/download-template';
 import { EditItemDialog } from '@/components/dataset/edit-item';
+import { ExportAllButton } from '@/components/dataset/export-item';
 import { ManageFieldsDialog } from '@/components/dataset/manage-field';
 import { UploadItem } from '@/components/dataset/upload-item';
 import { ViewItemDialog } from '@/components/dataset/view-item';
@@ -34,6 +36,8 @@ import { TablePaging } from '@/components/base/pagination';
 
 import { useRecordList, useRecordField, useRecordActions } from '@/hooks/use-dataset';
 import { usePagingStore } from '@/stores/paging';
+import { downloadExcelFile } from '@/utils/excel';
+import { RecordInfo } from '@/types/dataset';
 import { formatTime } from '@/utils/time';
 
 
@@ -82,7 +86,7 @@ export function DatasetTable({ collection }: {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const { data, isLoading } = useRecordList(collection, params);
-  const { remove, checkPage } = useRecordActions(collection);
+  const { exportBatch } = useRecordActions(collection);
   const { data: fields, isLoading: fieldsLoading } = useRecordField(collection);
 
   // 过滤出需要在表格中显示的自定义字段（排除 content 和 updated_at）
@@ -93,15 +97,34 @@ export function DatasetTable({ collection }: {
     );
   }, [fields]);
 
-  const batchDel = () => {
-    remove.mutate(selectedIds, {
-      onSuccess: async () => {
-        await checkPage();
-        toast.success(`批量删除成功`);
-        setSelectedIds([]);
+  const batchExport = () => {
+    exportBatch.mutate(selectedIds, {
+      onSuccess: async (res) => {
+        const records = res.data;
+        try {
+          // 构建 Excel 数据
+          const customFields = fields?.filter(f => f.field_name !== 'updated_at') ?? [];
+          const headerRow = ['content', ...customFields.map(f => f.field_name)];
+
+          const dataRows = records.map((record: RecordInfo) => {
+            const payload = record.payload || {};
+            return [
+              payload.content || '',
+              ...customFields.map(f => (payload[f.field_name] !== undefined ? String(payload[f.field_name]) : ''))
+            ];
+          });
+
+          const sheetData = [headerRow, ...dataRows];
+          downloadExcelFile(sheetData, `${collection}_选中数据.xlsx`, '数据集');
+
+          toast.success(`成功导出 ${records.length} 条记录`);
+        } catch (error) {
+          console.error('导出失败:', error);
+          toast.error('生成 Excel 文件失败');
+        }
       },
       onError: (err: Error) => {
-        toast.error(err.message || '批量删除失败');
+        toast.error(err.message || '批量导出失败');
       },
     })
   };
@@ -119,6 +142,7 @@ export function DatasetTable({ collection }: {
             <AddItemDialog collection={collection} />
             <UploadItem collection={collection} />
             <DownloadTemplate collection={collection} />
+            <ExportAllButton collection={collection} />
             <ClearDatasetDialog collection={collection} />
           </div>
         </CardHeader>
@@ -223,9 +247,21 @@ export function DatasetTable({ collection }: {
             onClick={() => setSelectedIds([])}>
             取消
           </Button>
-          <Button size="sm" variant="destructive" className="h-8" onClick={() => batchDel()}>
-            <Trash2Icon className="mr-2 h-3.5 w-3.5" /> 批量删除
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 border-white/30 text-white bg-transparent hover:bg-white/10 hover:border-white/50 hover:text-white"
+            disabled={exportBatch.isPending}
+            onClick={() => batchExport()}
+          >
+            {exportBatch.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+            ) : (
+              <DownloadIcon className="mr-2 h-4 w-4"/>
+            )}
+            批量导出
           </Button>
+          <BatchDeleteItem collection={collection} ids={selectedIds} callback={() => setSelectedIds([])}/>
         </div>
       )}
     </>

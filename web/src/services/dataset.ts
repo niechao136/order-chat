@@ -54,6 +54,21 @@ export async function getRecordCount(name: string) {
   return data;
 }
 
+export async function getAllRecord(name: string) {
+  const res = await apiRequest(`dataset/${name}/all`);
+  const data: PageResult<RecordInfo> = await res.json();
+  return data;
+}
+
+export async function getBatchRecord(name: string, body: string) {
+  const res = await apiRequest(`dataset/${name}/batch`, {
+    method: 'POST',
+    body,
+  });
+  const data: PageResult<RecordInfo> = await res.json();
+  return data;
+}
+
 export async function addRecord(name: string, body: string) {
   const res = await apiRequest(`dataset/${name}/item`, {
     method: 'POST',

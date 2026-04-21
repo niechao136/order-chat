@@ -16,6 +16,10 @@ class ItemUpdate(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
+class ItemBatch(BaseModel):
+    ids: List[str]
+
+
 class ItemDelete(BaseModel):
     ids: List[str]
 

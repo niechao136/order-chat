@@ -16,7 +16,7 @@ from qdrant_client.models import (
 from src.database.postgre import get_db_pool
 from src.dataset.embedding import get_embedding_async, get_embeddings_async_batch
 from src.dataset.qdrant import get_qdrant_client_async
-from src.schemas.dataset import CollectionAdd, ItemSearch, ItemAdd, ItemUpdate, ItemDelete, FieldItem
+from src.schemas.dataset import CollectionAdd, ItemSearch, ItemAdd, ItemUpdate, ItemDelete, FieldItem, ItemBatch
 from src.schemas.page import NoPageResult, DataResult, PageResult, PageParams
 from src.utils.dataset import validate_and_fill_metadata, build_qdrant_filter, get_qdrant_index_params
 from src.utils.jwt import get_current_admin
@@ -36,13 +36,13 @@ async def collection_list(client: AsyncQdrantClient = Depends(get_qdrant_client_
 async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(req.name)
     if exist:
-        return DataResult(status=0, msg="Dataset already exists")
+        raise HTTPException(status_code=400, detail="Dataset already exists")
 
     add = await client.create_collection(
         collection_name=req.name,
         vectors_config=models.VectorParams(size=3072, distance=models.Distance.COSINE))
     if not add:
-        return DataResult(status=0, msg="Dataset add failed")
+        raise HTTPException(status_code=400, detail="Dataset add failed")
 
     info = await client.get_collection(req.name)
 
@@ -53,7 +53,7 @@ async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends
 async def collection_info(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(name)
     if not exist:
-        return DataResult(status=0, msg="Dataset not exists")
+        raise HTTPException(status_code=400, detail="Dataset already exists")
 
     info = await client.get_collection(name)
     return DataResult(status=1, data=info)
@@ -63,11 +63,11 @@ async def collection_info(name: str, client: AsyncQdrantClient = Depends(get_qdr
 async def delete_collection(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(name)
     if not exist:
-        return DataResult(status=0, msg="Dataset not exists")
+        raise HTTPException(status_code=400, detail="Dataset already exists")
 
     delete = await client.delete_collection(name)
     if not delete:
-        return DataResult(status=0, msg="Dataset delete failed")
+        raise HTTPException(status_code=400, detail="Dataset delete failed")
 
     return DataResult(status=1)
 
@@ -78,6 +78,10 @@ async def item_list(
         params: PageParams = Depends(),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     info = await client.count(collection_name=name)
     total = info.count
 
@@ -118,6 +122,10 @@ async def item_list(
 
 @dataset_router.get("/{name}/count", response_model=DataResult[int])
 async def item_count(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     info = await client.count(collection_name=name)
     total = info.count
     return DataResult(status=1, data=total)
@@ -129,6 +137,10 @@ async def add_item(
         req: ItemAdd,
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     validated_metadata = await validate_and_fill_metadata(name, metadata=[req.metadata or {}])
     vector = await get_embedding_async(text=req.content)
     ms_timestamp = int(time.time() * 1000)
@@ -144,12 +156,72 @@ async def add_item(
     return DataResult(status=1, data=str(uu_id))
 
 
+@dataset_router.get("/{name}/all", response_model=NoPageResult[Record])
+async def get_all_items(
+    name: str,
+    client: AsyncQdrantClient = Depends(get_qdrant_client_async)
+):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
+    all_records: List[Record] = []
+    offset = None
+    batch_size = 100  # 每批获取数量
+
+    while True:
+        records, next_offset = await client.scroll(
+            collection_name=name,
+            limit=batch_size,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False
+        )
+        all_records.extend(records)
+
+        if next_offset is None:
+            break
+        offset = next_offset
+
+    return NoPageResult(data=all_records, total=len(all_records))
+
+
+@dataset_router.post("/{name}/batch", response_model=NoPageResult[Record])
+async def batch_get_items(
+    name: str,
+    req: ItemBatch,
+    client: AsyncQdrantClient = Depends(get_qdrant_client_async)
+):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
+    if not req.ids:
+        return NoPageResult(data=[], total=0)
+
+    records = await client.retrieve(
+        collection_name=name,
+        ids=req.ids,
+        with_payload=True,
+        with_vectors=False
+    )
+
+    if not records:
+        return NoPageResult(data=[], total=0)
+
+    return NoPageResult(data=records, total=len(records))
+
+
 @dataset_router.post("/{name}/item/upload", response_model=DataResult[List[str]])
 async def upload_item(
         name: str,
         req: List[ItemAdd],
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     metadata = [item.metadata or {} for item in req]
     validated_metadata = await validate_and_fill_metadata(name, metadata)
 
@@ -186,6 +258,10 @@ async def update_item(
         req: ItemUpdate,
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     validated_metadata = await validate_and_fill_metadata(name, metadata=[req.metadata or {}])
     vector = await get_embedding_async(text=req.content)
     ms_timestamp = int(time.time() * 1000)
@@ -207,7 +283,11 @@ async def update_item(
 
 @dataset_router.get("/{name}/item/{item_id}", response_model=DataResult[Record])
 async def get_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
-    res = await client.retrieve(collection_name=name, ids=[item_id])
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
+    res = await client.retrieve(collection_name=name, ids=[item_id], with_payload=True)
 
     if not res:
         return DataResult(status=0, msg="Item not found")
@@ -217,12 +297,20 @@ async def get_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(
 
 @dataset_router.delete("/{name}/item/delete", response_model=DataResult[str])
 async def delete_item(name: str, req: ItemDelete, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     await client.delete(collection_name=name, points_selector=req.ids, wait=True)
     return DataResult(status=1)
 
 
 @dataset_router.delete("/{name}/clear", response_model=DataResult[str])
 async def clear_items(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     await client.delete(
         collection_name=name,
         points_selector=models.Filter(must=[])  # 匹配所有
@@ -232,6 +320,10 @@ async def clear_items(name: str, client: AsyncQdrantClient = Depends(get_qdrant_
 
 @dataset_router.post("/{name}/search", response_model=NoPageResult[ScoredPoint])
 async def search_item(name: str, req: ItemSearch, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     vector = await get_embedding_async(text=req.text)
 
     filter_obj = build_qdrant_filter(req.filters) if req.filters else None
@@ -247,7 +339,15 @@ async def search_item(name: str, req: ItemSearch, client: AsyncQdrantClient = De
 
 
 @dataset_router.get("/{name}/fields", response_model=DataResult[List[FieldItem]])
-async def list_fields(name: str, db_pool = Depends(get_db_pool)):
+async def list_fields(
+        name: str,
+        db_pool = Depends(get_db_pool),
+        client: AsyncQdrantClient = Depends(get_qdrant_client_async)
+):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     async with db_pool.connection() as conn:
         cur = await conn.execute(
             """
@@ -280,6 +380,10 @@ async def replace_fields(
         db_pool = Depends(get_db_pool),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail="Dataset already exists")
+
     # 基础校验：字段名不能重复
     field_names = [item.field_name for item in req]
     if len(field_names) != len(set(field_names)):

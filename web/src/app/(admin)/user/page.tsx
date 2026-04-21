@@ -1,9 +1,8 @@
 'use client';
 
 import debounce from 'lodash/debounce';
-import { DatabaseIcon, Trash2Icon, ArrowUpDown, ArrowUp, ArrowDown, SearchIcon } from 'lucide-react';
+import { DatabaseIcon, ArrowUpDown, ArrowUp, ArrowDown, SearchIcon } from 'lucide-react';
 import { useState, useMemo, useEffect, ChangeEvent, KeyboardEvent } from 'react';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -26,11 +25,12 @@ import {
 
 import { TablePaging } from '@/components/base/pagination';
 import { AddUserDialog } from '@/components/user/add-user';
+import { BatchDeleteUser } from '@/components/user/batch-delete-user';
 import { DeleteUserDialog } from '@/components/user/delete-user';
 import { EditUserDialog } from '@/components/user/edit-user';
 import { ResetUserDialog } from '@/components/user/reset-user';
 
-import { useUserList, useUserAction, useUserCount, useOwner } from '@/hooks/use-user';
+import { useUserList, useUserCount, useOwner } from '@/hooks/use-user';
 import { usePagingStore } from '@/stores/paging';
 import { formatTimeStr } from '@/utils/time';
 
@@ -61,7 +61,6 @@ export default function UserPage() {
   const { data, isLoading } = useUserList(params);
   const { data: total } = useUserCount();
   const { data: owner } = useOwner();
-  const { remove, checkPage } = useUserAction();
 
   const debouncedSetSearch = useMemo(() => {
     return debounce((value: string) => setSearch(pagingKey, value), 500)
@@ -112,19 +111,6 @@ export default function UserPage() {
   const allowCheck = useMemo(() => {
     return (data?.data ?? []).filter(o => o.id !== owner?.id).map(r => r.id)
   }, [data, owner]);
-
-  const batchDel = () => {
-    remove.mutate(selectedIds, {
-      onSuccess: async () => {
-        await checkPage();
-        toast.success(`批量删除成功`);
-        setSelectedIds([]);
-      },
-      onError: (err: Error) => {
-        toast.error(err.message || '批量删除失败');
-      },
-    });
-  };
 
   return (
     <div className="p-6 flex flex-col gap-4 bg-background">
@@ -250,9 +236,7 @@ export default function UserPage() {
             onClick={() => setSelectedIds([])}>
             取消
           </Button>
-          <Button size="sm" variant="destructive" className="h-8" onClick={() => batchDel()}>
-            <Trash2Icon className="mr-2 h-3.5 w-3.5" /> 批量删除
-          </Button>
+          <BatchDeleteUser ids={selectedIds} callback={() => setSelectedIds([])} />
         </div>
       )}
     </div>

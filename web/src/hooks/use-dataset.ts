@@ -17,6 +17,8 @@ import {
   clearCol,
   getRecordInfo,
   uploadRecord,
+  getAllRecord,
+  getBatchRecord,
   getFieldList,
   setFieldList,
 } from '@/services/dataset';
@@ -223,6 +225,16 @@ export function useRecordActions(colName: string) {
     }
   });
 
+  // 导出全部
+  const exportAll = useMutation({
+    mutationFn: () => getAllRecord(colName),
+  });
+
+  // 导出全部
+  const exportBatch = useMutation({
+    mutationFn: (ids: string[]) => getBatchRecord(colName, JSON.stringify({ ids })),
+  });
+
   // 检索测试
   const search = useMutation({
     mutationFn: ({ text, top_k, filters }: {
@@ -243,6 +255,8 @@ export function useRecordActions(colName: string) {
     remove,
     clear,
     upload,
+    exportAll,
+    exportBatch,
     search,
     setField,
     jumpToLast,
