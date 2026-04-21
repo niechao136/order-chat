@@ -6,27 +6,27 @@ import { ChatThread, ChatMessage } from '@/types/chat';
 export async function getGraphList()  {
   const res = await apiRequest('chat', {
     requireAuth: false,
-  })
-  const data: string[] = await res.json()
-  return data
+  });
+  const data: string[] = await res.json();
+  return data;
 }
 
 
 export async function getThreadList(graph: string) {
   const res = await apiRequest(`chat/${graph}`, {
     requireAuth: false,
-  })
-  const data: PageResult<ChatThread> = await res.json()
-  return data
+  });
+  const data: PageResult<ChatThread> = await res.json();
+  return data;
 }
 
 
 export async function getChatHistory(graph: string, thread_id: string) {
   const res = await apiRequest(`chat/${graph}/${thread_id}`, {
     requireAuth: false,
-  })
-  const data: PageResult<ChatMessage> = await res.json()
-  return data
+  });
+  const data: PageResult<ChatMessage> = await res.json();
+  return data;
 }
 
 

@@ -15,7 +15,7 @@ export const chatKeys = {
   thread: (graph: string) => [ ...chatKeys.threads(), graph ] as const,
   histories: () => [ ...chatKeys.all, 'history' ] as const,
   history: (graph: string, thread_id: string) => [ ...chatKeys.histories(), graph, thread_id ] as const,
-}
+};
 
 
 export function useGraph() {
@@ -159,5 +159,5 @@ export function useChatAction(graph: string = '') {
   return {
     sendMsg,
     fetchGraph,
-  }
+  };
 }

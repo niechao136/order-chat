@@ -39,7 +39,7 @@ export function DeleteDatasetDialog({ name }: {
         toast.error(err.message || '删除失败');
       }
     });
-  }
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>

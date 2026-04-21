@@ -1,8 +1,8 @@
 'use client';
 
-import { ChevronsUpDownIcon, VectorSquareIcon } from 'lucide-react'
+import { ChevronsUpDownIcon, VectorSquareIcon } from 'lucide-react';
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 
 import {
   DropdownMenu,
@@ -25,7 +25,7 @@ export function GraphSwitch({ graphs, active }: {
 
   const switchGraph = (graph: string) => {
     router.push(`/chat/${graph}`)
-  }
+  };
 
   return (
     <SidebarMenu>
@@ -71,5 +71,5 @@ export function GraphSwitch({ graphs, active }: {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }

@@ -41,7 +41,7 @@ export function DeleteItemDialog({ collection, item }: {
         toast.error(err.message || '删除失败');
       }
     });
-  }
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -69,5 +69,5 @@ export function DeleteItemDialog({ collection, item }: {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }

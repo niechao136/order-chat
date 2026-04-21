@@ -148,5 +148,5 @@ export function UploadItem({ collection }: {
         批量上传
       </Button>
     </>
-  )
+  );
 }

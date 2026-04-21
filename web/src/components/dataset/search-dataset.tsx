@@ -67,7 +67,7 @@ export function SearchDataset({ collection }: {
         setSearched(true);
       }
     });
-  }
+  };
 
   return (
     <Card className="h-full shadow-sm border-primary/10 flex flex-col overflow-hidden">
@@ -180,5 +180,5 @@ export function SearchDataset({ collection }: {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

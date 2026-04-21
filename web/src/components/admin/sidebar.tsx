@@ -115,5 +115,5 @@ export function AdminSidebar({ owner, nav }: {
       </SidebarFooter>
       <SidebarRail/>
     </Sidebar>
-  )
+  );
 }

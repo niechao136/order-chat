@@ -20,7 +20,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/s
 import { AdminSidebar } from '@/components/admin/sidebar';
 import { useColList } from '@/hooks/use-dataset';
 import { useOwner } from '@/hooks/use-user';
-import { NavItem } from '@/types/ui'
+import { NavItem } from '@/types/ui';
 
 
 export function AdminBody({ children }: {
@@ -38,7 +38,7 @@ export function AdminBody({ children }: {
       return {
         href: `/dataset/${item.name}`,
         title: item.name,
-      } as NavItem
+      } as NavItem;
     })
     const list: NavItem[] = [
       {
@@ -57,8 +57,8 @@ export function AdminBody({ children }: {
         title: '用户管理',
         icon: UserRoundIcon,
       },
-    ]
-    return list
+    ];
+    return list;
   }, [datasets]);
 
   const title = useMemo(() => {
@@ -89,7 +89,7 @@ export function AdminBody({ children }: {
       if (child) breadcrumbs.push(child.title);
     }
     return breadcrumbs
-  }, [collection, pathname, nav])
+  }, [collection, pathname, nav]);
 
   return (
     <SidebarProvider>
@@ -125,5 +125,5 @@ export function AdminBody({ children }: {
         </main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

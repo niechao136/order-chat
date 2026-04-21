@@ -5,7 +5,7 @@ from src.database.postgre import get_db_pool
 from src.schemas.auth import TokenDict
 from src.schemas.page import PageResult, PageParams, DataResult
 from src.schemas.user import UserInfo, UserAdd, UserUpdate, UserPassword, UserDel
-from src.utils.jwt import get_current_admin, get_current_user, get_chat_user
+from src.utils.jwt import get_current_admin, get_current_user
 from src.utils.api import hand_id
 from src.utils.pwd import pwd_context
 
@@ -65,7 +65,7 @@ async def user_count(_: TokenDict = Depends(get_current_admin)):
         )
         row = await cur.fetchone()
         count = row.get("count") if isinstance(row, dict) else row[0]
-        return DataResult(status=1, msg=None, data=count)
+        return DataResult(status=1, data=count)
 
 
 @user_router.get("/me", response_model=DataResult[UserInfo])
@@ -80,9 +80,9 @@ async def current_user(user: TokenDict = Depends(get_current_user), pool = Depen
         row = await cur.fetchone()
 
         if not row:
-            return DataResult(status=0, msg="User not found or inactive", data=None)
+            return DataResult(status=0, msg="User not found or inactive")
 
-        return DataResult(status=1, data=UserInfo(**hand_id(row)), msg=None)
+        return DataResult(status=1, data=UserInfo(**hand_id(row)))
 
 
 @user_router.get("/{user_id}", response_model=DataResult[UserInfo])
@@ -98,9 +98,9 @@ async def user_info(user_id: str, _: TokenDict = Depends(get_current_admin)):
         row = await cur.fetchone()
 
         if not row:
-            return DataResult(status=0, msg="User not found or inactive", data=None)
+            return DataResult(status=0, msg="User not found or inactive")
 
-        return DataResult(status=1, data=UserInfo(**hand_id(row)), msg=None)
+        return DataResult(status=1, data=UserInfo(**hand_id(row)))
 
 
 @user_router.post("", response_model=DataResult[UserInfo])
@@ -113,7 +113,7 @@ async def add_user(user: UserAdd, _: TokenDict = Depends(get_current_admin)):
                 (user.username,)
             )
             if await cur.fetchone():
-                return DataResult(status=0, msg="Username already exists", data=None)
+                return DataResult(status=0, msg="Username already exists")
 
             hash_pwd = pwd_context.hash(user.password)
             cur = await conn.execute(
@@ -125,7 +125,7 @@ async def add_user(user: UserAdd, _: TokenDict = Depends(get_current_admin)):
             row = await cur.fetchone()
 
             info = UserInfo(**hand_id(row))
-            return DataResult(status=1, msg=None, data=info)
+            return DataResult(status=1, data=info)
 
 
 @user_router.put("/{user_id}", response_model=DataResult[UserInfo])
@@ -139,7 +139,7 @@ async def update_user(user_id: str, user: UserUpdate, _: TokenDict = Depends(get
                 (target_id,)
             )
             if not await cur.fetchone():
-                return DataResult(status=0, msg="User not found or inactive", data=None)
+                return DataResult(status=0, msg="User not found or inactive")
 
             cur = await conn.execute(
                 """
@@ -152,7 +152,7 @@ async def update_user(user_id: str, user: UserUpdate, _: TokenDict = Depends(get
                 (user.username, user.email, target_id)
             )
             if await cur.fetchone():
-                return DataResult(status=0, msg="Username or Email already taken", data=None)
+                return DataResult(status=0, msg="Username or Email already taken")
 
             cur = await conn.execute(
                 """
@@ -164,13 +164,13 @@ async def update_user(user_id: str, user: UserUpdate, _: TokenDict = Depends(get
             row = await cur.fetchone()
 
             info = UserInfo(**hand_id(row))
-            return DataResult(status=1, msg=None, data=info)
+            return DataResult(status=1, data=info)
 
 
 @user_router.delete("", response_model=DataResult[List[str]])
 async def delete_user(req: UserDel, _: TokenDict = Depends(get_current_admin)):
     if not req.ids:
-        return DataResult(status=0, msg="No user IDs provided", data=None)
+        return DataResult(status=0, msg="No user IDs provided")
 
     pool = await get_db_pool()
     async with pool.connection() as conn:
@@ -178,7 +178,7 @@ async def delete_user(req: UserDel, _: TokenDict = Depends(get_current_admin)):
             try:
                 target_ids = [int(uid) for uid in req.ids]
             except ValueError:
-                return DataResult(status=0, msg="Invalid user ID format", data=None)
+                return DataResult(status=0, msg="Invalid user ID format")
 
             cur = await conn.execute(
                 """
@@ -194,9 +194,9 @@ async def delete_user(req: UserDel, _: TokenDict = Depends(get_current_admin)):
             deleted_ids = [str(row.get("id")) if isinstance(row, dict) else str(row[0]) for row in rows]
 
             if not deleted_ids:
-                return DataResult(status=0, msg="No active users found to delete", data=None)
+                return DataResult(status=0, msg="No active users found to delete")
 
-            return DataResult(status=1, msg=None, data=deleted_ids)
+            return DataResult(status=1, data=deleted_ids)
 
 
 @user_router.patch("/me/password", response_model=DataResult[str])
@@ -209,11 +209,11 @@ async def change_my_password(info: UserPassword, user: TokenDict = Depends(get_c
                 (int(user.id),)
             )
             if not await cur.fetchone():
-                return DataResult(status=0, msg="User not found or inactive", data=None)
+                return DataResult(status=0, msg="User not found or inactive")
 
             new_hash = pwd_context.hash(info.password)
             await conn.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, int(user.id)))
-            return DataResult(status=1, msg=None, data=None)
+            return DataResult(status=1)
 
 
 @user_router.patch("/{user_id}/password", response_model=DataResult[str])
@@ -227,8 +227,8 @@ async def admin_reset_password(user_id: str, info: UserPassword, _: TokenDict = 
                 (target_id,)
             )
             if not await cur.fetchone():
-                return DataResult(status=0, msg="User not found or inactive", data=None)
+                return DataResult(status=0, msg="User not found or inactive")
 
             new_hash = pwd_context.hash(info.password)
             await conn.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, target_id))
-            return DataResult(status=1, msg=None, data=None)
+            return DataResult(status=1)

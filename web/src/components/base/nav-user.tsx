@@ -7,7 +7,7 @@ import {
   LogOutIcon,
   MessageSquareIcon
 } from 'lucide-react';
-import { useState } from 'react'
+import { useState } from 'react';
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -154,5 +154,5 @@ export function NavUser({ mode, owner }: {
       </SidebarMenu>
       <ChangePassword open={open} onOpenChange={setOpen}/>
     </>
-  )
+  );
 }

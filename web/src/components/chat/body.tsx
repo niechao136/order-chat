@@ -65,5 +65,5 @@ export function ChatBody({ children }: {
         </main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

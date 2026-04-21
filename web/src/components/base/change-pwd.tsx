@@ -44,8 +44,8 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function ChangePassword({ open, onOpenChange }: DialogProps) {
 
-  const { changeMe } = useUserAction()
-  const { isPending, mutate } = changeMe
+  const { changeMe } = useUserAction();
+  const { isPending, mutate } = changeMe;
 
   const { handleSubmit, register, reset, formState: { errors } } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

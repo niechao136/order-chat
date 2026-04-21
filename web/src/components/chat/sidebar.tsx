@@ -1,6 +1,6 @@
 'use client';
 
-import { PlusIcon } from 'lucide-react'
+import { PlusIcon } from 'lucide-react';
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -70,5 +70,5 @@ export function ChatSidebar({ graphs, owner, threads }: {
       </SidebarFooter>
       <SidebarRail/>
     </Sidebar>
-  )
+  );
 }

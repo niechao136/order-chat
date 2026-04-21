@@ -104,7 +104,7 @@ export function DatasetTable({ collection }: {
         toast.error(err.message || '批量删除失败');
       },
     })
-  }
+  };
 
   return (
     <>
@@ -229,6 +229,6 @@ export function DatasetTable({ collection }: {
         </div>
       )}
     </>
-  )
+  );
 
 }

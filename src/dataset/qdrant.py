@@ -10,7 +10,6 @@ load_dotenv()
 host = os.getenv("QDRANT_HOST", "localhost")
 port = int(os.getenv("QDRANT_PORT", 6333))
 grpc = port == 6334
-COLLECTION_NAME = os.getenv("QDRANT_NAME", "menu")
 
 _client_async: AsyncQdrantClient | None = None
 

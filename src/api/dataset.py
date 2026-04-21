@@ -36,40 +36,40 @@ async def collection_list(client: AsyncQdrantClient = Depends(get_qdrant_client_
 async def add_collection(req: CollectionAdd, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(req.name)
     if exist:
-        return DataResult(status=0, msg="Dataset already exists", data=None)
+        return DataResult(status=0, msg="Dataset already exists")
 
     add = await client.create_collection(
         collection_name=req.name,
         vectors_config=models.VectorParams(size=3072, distance=models.Distance.COSINE))
     if not add:
-        return DataResult(status=0, msg="Dataset add failed", data=None)
+        return DataResult(status=0, msg="Dataset add failed")
 
     info = await client.get_collection(req.name)
 
-    return DataResult(status=1, msg=None, data=info)
+    return DataResult(status=1, data=info)
 
 
 @dataset_router.get("/{name}", response_model=DataResult[CollectionInfo])
 async def collection_info(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(name)
     if not exist:
-        return DataResult(status=0, msg="Dataset not exists", data=None)
+        return DataResult(status=0, msg="Dataset not exists")
 
     info = await client.get_collection(name)
-    return DataResult(status=1, msg=None, data=info)
+    return DataResult(status=1, data=info)
 
 
 @dataset_router.delete("/{name}", response_model=DataResult[str])
 async def delete_collection(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     exist = await client.collection_exists(name)
     if not exist:
-        return DataResult(status=0, msg="Dataset not exists", data=None)
+        return DataResult(status=0, msg="Dataset not exists")
 
     delete = await client.delete_collection(name)
     if not delete:
-        return DataResult(status=0, msg="Dataset delete failed", data=None)
+        return DataResult(status=0, msg="Dataset delete failed")
 
-    return DataResult(status=1, msg=None, data=None)
+    return DataResult(status=1)
 
 
 @dataset_router.get("/{name}/item", response_model=PageResult[Record])
@@ -120,7 +120,7 @@ async def item_list(
 async def item_count(name: str, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     info = await client.count(collection_name=name)
     total = info.count
-    return DataResult(status=1, data=total, msg=None)
+    return DataResult(status=1, data=total)
 
 
 @dataset_router.post("/{name}/item", response_model=DataResult[str])
@@ -141,7 +141,7 @@ async def add_item(
     await client.upsert(collection_name=name, points=[
         models.PointStruct(id=uu_id, vector=vector, payload=payload)
     ])
-    return DataResult(status=1, msg=None, data=str(uu_id))
+    return DataResult(status=1, data=str(uu_id))
 
 
 @dataset_router.post("/{name}/item/upload", response_model=DataResult[List[str]])
@@ -176,7 +176,7 @@ async def upload_item(
         wait=True,
         batch_size=64
     )
-    return DataResult(status=1, msg=None, data=new_ids)
+    return DataResult(status=1, data=new_ids)
 
 
 @dataset_router.put("/{name}/item/{item_id}", response_model=DataResult[str])
@@ -202,7 +202,7 @@ async def update_item(
     await client.upsert(collection_name=name, points=[
         models.PointStruct(id=uu_id, vector=vector, payload=payload)
     ])
-    return DataResult(status=1, msg=None, data=str(uu_id))
+    return DataResult(status=1, data=str(uu_id))
 
 
 @dataset_router.get("/{name}/item/{item_id}", response_model=DataResult[Record])
@@ -210,15 +210,15 @@ async def get_item(name: str, item_id: str, client: AsyncQdrantClient = Depends(
     res = await client.retrieve(collection_name=name, ids=[item_id])
 
     if not res:
-        return DataResult(status=0, msg="Item not found", data=None)
+        return DataResult(status=0, msg="Item not found")
 
-    return DataResult(status=1, data=res[0], msg=None)
+    return DataResult(status=1, data=res[0])
 
 
 @dataset_router.delete("/{name}/item/delete", response_model=DataResult[str])
 async def delete_item(name: str, req: ItemDelete, client: AsyncQdrantClient = Depends(get_qdrant_client_async)):
     await client.delete(collection_name=name, points_selector=req.ids, wait=True)
-    return DataResult(status=1, msg=None, data=None)
+    return DataResult(status=1)
 
 
 @dataset_router.delete("/{name}/clear", response_model=DataResult[str])
@@ -227,7 +227,7 @@ async def clear_items(name: str, client: AsyncQdrantClient = Depends(get_qdrant_
         collection_name=name,
         points_selector=models.Filter(must=[])  # 匹配所有
     )
-    return DataResult(status=1, msg=None, data=None)
+    return DataResult(status=1)
 
 
 @dataset_router.post("/{name}/search", response_model=NoPageResult[ScoredPoint])
@@ -270,7 +270,7 @@ async def list_fields(name: str, db_pool = Depends(get_db_pool)):
             )
             for row in rows
         ]
-    return DataResult(status=1, msg=None, data=fields)
+    return DataResult(status=1, data=fields)
 
 
 @dataset_router.post("/{name}/fields", response_model=DataResult[str])
@@ -353,4 +353,4 @@ async def replace_fields(
                 wait=True
             )
 
-    return DataResult(status=1, msg=None, data=name)
+    return DataResult(status=1, data=name)

@@ -57,7 +57,7 @@ export const usePagingStore = create<PagingStore>()(
             page,
           },
         },
-      }))
+      }));
     },
     setSize: (key, size) => {
       setState((state) => ({
@@ -69,7 +69,7 @@ export const usePagingStore = create<PagingStore>()(
             page: 1,
           },
         },
-      }))
+      }));
     },
     setSort: (key, order_by, direction) => {
       setState((state) => ({
@@ -81,7 +81,7 @@ export const usePagingStore = create<PagingStore>()(
             direction,
           },
         },
-      }))
+      }));
     },
     setSearch: (key, keyword) => {
       setState((state) => ({
@@ -92,7 +92,7 @@ export const usePagingStore = create<PagingStore>()(
             keyword,
           },
         },
-      }))
+      }));
     },
   }))
-)
+);

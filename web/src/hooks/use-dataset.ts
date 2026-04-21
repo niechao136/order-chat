@@ -64,7 +64,7 @@ export function useColAction() {
       queryKey: datasetKeys.recordLists(name),
       exact: false
     });
-  }
+  };
 
   const add = useMutation({
     mutationFn: addCol,

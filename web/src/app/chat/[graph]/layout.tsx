@@ -7,5 +7,5 @@ export default async function ChatLayout({ children }: {
 }) {
   return (
     <ChatBody>{children}</ChatBody>
-  )
+  );
 }

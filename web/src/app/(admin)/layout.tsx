@@ -7,5 +7,5 @@ export default async function AdminLayout({ children }: {
 }) {
   return (
     <AdminBody>{children}</AdminBody>
-  )
+  );
 }

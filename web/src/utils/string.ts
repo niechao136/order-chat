@@ -21,7 +21,7 @@ export const getInitials = (name: string) => {
 
 
 export const getParams = (params?: PageParams) => {
-  if (!params) return ''
+  if (!params) return '';
 
   const filtered = Object.entries(params || {})
     .filter(([k, v]) => !!k && !!v && !!String(v).trim())
@@ -29,5 +29,5 @@ export const getParams = (params?: PageParams) => {
 
    const query = new URLSearchParams(filtered).toString();
 
-   return !!query ? `?${query}` : ''
-}
+   return !!query ? `?${query}` : '';
+};

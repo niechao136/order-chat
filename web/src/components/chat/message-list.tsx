@@ -42,4 +42,4 @@ export function MsgList({ messages }: { messages: ChatMessage[] }) {
 }
 
 
-export const MessageList = memo(MsgList)
+export const MessageList = memo(MsgList);

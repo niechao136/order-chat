@@ -39,7 +39,7 @@ export function ClearDatasetDialog({ collection }: {
         toast.error(err.message || '清空失败');
       }
     });
-  }
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -68,5 +68,5 @@ export function ClearDatasetDialog({ collection }: {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }

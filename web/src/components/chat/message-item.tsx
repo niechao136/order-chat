@@ -40,4 +40,4 @@ export function MsgItem({ role, content }: {
 }
 
 
-export const MessageItem = memo(MsgItem)
+export const MessageItem = memo(MsgItem);

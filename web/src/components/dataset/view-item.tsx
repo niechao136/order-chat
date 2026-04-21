@@ -52,5 +52,5 @@ export function ViewItemDialog({ content }: {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
