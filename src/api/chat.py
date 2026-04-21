@@ -187,14 +187,14 @@ async def get_chat_history(
                 content=msg.content
             ))
         elif isinstance(msg, AIMessage) and not msg.tool_calls:
-            if isinstance(msg.content, str):
-                content = msg.content
-            elif isinstance(msg.content, list):
+            if isinstance(msg.content, list):
                 first_item = msg.content[0] or ""
                 if isinstance(first_item, dict):
-                    content = first_item.get("text", "")
+                    content = str(first_item.get("text", ""))
                 else:
                     content = str(first_item)
+            else:
+                content = str(msg.content) if msg.content else ""
             data.append(ChatMessage(
                 id=msg.id,
                 role="assistant",
