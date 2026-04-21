@@ -108,6 +108,32 @@ def get_default_selected(options: List[OptionItem]) -> List[OptionItem]:
     return default_selected
 
 
+def fill_missing_defaults(options: List[OptionItem], selected: List[OptionItem]) -> List[OptionItem]:
+    """若 selected 未覆盖所有规格分类，补全缺失分类的默认选项"""
+    # 按规格名分组
+    groups = defaultdict(list)
+    for opt in options:
+        groups[opt.name].append(opt)
+
+    # 已选中的规格名集合
+    selected_names = {sel.name for sel in selected}
+    all_names = set(groups.keys())
+    missing_names = all_names - selected_names
+
+    # 补全缺失的规格
+    completed = list(selected)  # 浅拷贝，后续修改不影响原对象
+    for name in missing_names:
+        opts = groups[name]
+        zero_opts = [opt for opt in opts if opt.price == 0]
+        if zero_opts:
+            default_opt = min(zero_opts, key=lambda x: x.index)
+        else:
+            default_opt = min(opts, key=lambda x: x.index)
+        completed.append(default_opt)
+
+    return completed
+
+
 def selected_equal(sel1: List[OptionItem], sel2: List[OptionItem]) -> bool:
     """比较两个 selected 列表是否包含相同规格（基于 ID 集合）"""
     ids1 = {opt.id for opt in sel1}
@@ -129,13 +155,16 @@ def update_cart(old_cart: List[ProductItem], ops: OperatorSchema) -> List[Produc
         action = change_item.action
         product = change_item.product
 
-        if action == "add" and not product.selected:
-            product.selected = get_default_selected(product.options)
-
         if action == "add":
             # 查找是否已存在相同商品（ID 相同且 selected 规格组合相同）
             matched = False
             product.quantity = max(product.quantity, 1)
+            if not product.selected:
+                # 若 selected 为空，直接使用全默认规格
+                product.selected = get_default_selected(product.options)
+            else:
+                # 若 selected 非空但未包含全部规格，则补全缺失分类
+                product.selected = fill_missing_defaults(product.options, product.selected)
             for cart_item in new_cart:
                 if cart_item.id == product.id and selected_equal(cart_item.selected, product.selected):
                     # 规格组合相同，合并数量
