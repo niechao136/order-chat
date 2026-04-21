@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import * as z from 'zod';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,10 +24,13 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const graph = typeof window !== 'undefined'
+  ? localStorage.getItem('login_redirect_graph') || null
+  : null;
+
+
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const graphParam = searchParams.get('graph');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,9 +53,10 @@ export default function LoginPage() {
           return;
         }
 
-        const graph = graphs?.includes(graphParam ?? '') ? graphParam : graphs?.[0];
+        const def = graphs?.includes(graph ?? '') ? graph : graphs?.[0];
+        localStorage.removeItem('login_redirect_graph');
 
-        router.push(`/chat/${graph}`);
+        router.push(`/chat/${def}`);
       },
       onError: (err) => {
         toast.error(err?.message || '登录失败，请检查账号密码');
@@ -121,7 +125,7 @@ export default function LoginPage() {
       <CardFooter className="justify-center text-sm text-slate-500">
         还没有账号？
         <Link
-          href={`/register${!!graphs?.includes(graphParam ?? '') ? `?graph=${graphParam}` : ''}`}
+          href={`/register`}
           className="text-blue-600 hover:underline ml-1">
           立即注册
         </Link>

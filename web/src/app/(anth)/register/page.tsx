@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import * as z from 'zod';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,10 +48,13 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const graph = typeof window !== 'undefined'
+  ? localStorage.getItem('login_redirect_graph') || null
+  : null;
+
+
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const graphParam = searchParams.get('graph');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -79,9 +82,10 @@ export default function RegisterPage() {
           return;
         }
 
-        const graph = graphs?.includes(graphParam ?? '') ? graphParam : graphs?.[0];
+        const def = graphs?.includes(graph ?? '') ? graph : graphs?.[0];
+        localStorage.removeItem('login_redirect_graph');
 
-        router.push(`/chat/${graph}`);
+        router.push(`/chat/${def}`);
       },
       onError: (err) => {
         toast.error(err?.message || '注册失败');
@@ -189,7 +193,7 @@ export default function RegisterPage() {
       <CardFooter className="justify-center text-sm text-slate-500">
         已有账号！
         <Link
-          href={`/login${!!graphs?.includes(graphParam ?? '') ? `?graph=${graphParam}` : ''}`}
+          href={`/login`}
           className="text-blue-600 hover:underline ml-1">
           立即登录
         </Link>

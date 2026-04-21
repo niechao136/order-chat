@@ -58,7 +58,7 @@ export function NavUser({ mode, owner }: {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton asChild size="lg">
-            <Link href={`/login?graph=${graph}`}>
+            <Link href={`/login`} onClick={() => localStorage.setItem('login_redirect_graph', graph)}>
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarFallback className="rounded-lg">访</AvatarFallback>
               </Avatar>
