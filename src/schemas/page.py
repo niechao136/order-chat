@@ -35,6 +35,6 @@ class NoPageResult(BaseModel, Generic[T]):
 
 
 class DataResult(BaseModel, Generic[T]):
-    data: Optional[T] = Field(None, description="某项数据具体信息")
-    status: Literal[1, 0] = Field(0, description="状态码")
-    msg: Optional[str] = Field(None, description="错误信息")
+    data: Optional[T] = Field(default=None, description="某项数据具体信息")
+    status: Literal[1, 0] = Field(default=0, description="状态码")
+    msg: Optional[str] = Field(default=None, description="错误信息")

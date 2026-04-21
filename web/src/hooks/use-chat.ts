@@ -40,7 +40,7 @@ export function useHistory(graph: string, thread_id: string) {
     queryKey: chatKeys.history(graph, thread_id),
     queryFn: () => getChatHistory(graph, thread_id).then(res => res.data),
     // 只有当两个参数都存在时才允许执行
-    enabled: !!graph && !!thread_id,
+    enabled: !!graph && !!thread_id && !thread_id.startsWith('temp_'),
     // 可选：如果希望进入页面时数据是最新的，可以设置
     staleTime: 1000 * 30 // 30秒内认为数据是新鲜的
   });
@@ -50,16 +50,21 @@ export function useChatAction(graph: string = '') {
   const queryClient = useQueryClient();
 
   const sendMsg = useMutation({
-    mutationFn: ({ thread_id, content, onChunk, onFinished }: {
-      thread_id: string;
+    mutationFn: ({ thread_id, content, onChunk, onFinished, onThreadCreated }: {
+      thread_id: string | null;
       content: string;
       onChunk: (content: string, node?: string) => void;
       onFinished?: () => void;
       onError?: () => void;
+      onThreadCreated?: (thread_id: string) => void;
     }) => {
+      let finalThreadId = thread_id;
+
       const onDone = async () => {
         // 对话完成后，刷新历史
-        await queryClient.invalidateQueries({ queryKey: chatKeys.history(graph, thread_id) });
+        if (finalThreadId) {
+          await queryClient.invalidateQueries({ queryKey: chatKeys.history(graph, finalThreadId) });
+        }
 
         // 对话完成后，刷新侧边栏
         await queryClient.invalidateQueries({ queryKey: chatKeys.thread(graph) });
@@ -68,64 +73,65 @@ export function useChatAction(graph: string = '') {
         onFinished?.();
       };
 
-      return sendMessage(graph, thread_id, content, onChunk, onDone);
+      const handleThreadCreated = (newThreadId: string) => {
+        finalThreadId = newThreadId;
+        onThreadCreated?.(newThreadId);
+      };
+
+      return sendMessage(graph, thread_id, content, onChunk, onDone, handleThreadCreated);
     },
     onMutate: async ({ thread_id, content }) => {
-      // 1. 取消正在进行的请求（列表和历史）
+      const optimisticThreadId = thread_id || `temp_${Date.now()}`;
+
+      // 乐观更新侧边栏
       await queryClient.cancelQueries({ queryKey: chatKeys.thread(graph) });
-      await queryClient.cancelQueries({ queryKey: chatKeys.history(graph, thread_id) });
-
-      // 2. 保存备份
       const previousThreads = queryClient.getQueryData<ChatThread[]>(chatKeys.thread(graph));
-      const previousHistory = queryClient.getQueryData<ChatMessage[]>(chatKeys.history(graph, thread_id));
-
-      // 3. 乐观更新左侧列表
       queryClient.setQueryData<ChatThread[]>(chatKeys.thread(graph), (old) => {
         const oldList = Array.isArray(old) ? old : [];
 
-        // 检查该 thread_id 是否已在列表中
-        const exists = oldList.find(t => t.thread_id === thread_id);
-
-        if (exists) {
-          // --- 旧对话逻辑 ---
-          // 1. 过滤掉旧的该对话项
-          const filtered = oldList.filter(t => t.thread_id !== thread_id);
-          // 2. 将其置顶，并更新最后活跃时间（可选是否更新 summary）
-          return [
-            exists,
-            ...filtered
-          ];
-        } else {
-          // --- 新对话逻辑 ---
-          const optimisticThread: ChatThread = {
-            thread_id: thread_id,
-            summary: content, // 初始标题通常是首条消息
-            last_id: new Date().toISOString()
-          };
-          return [ optimisticThread, ...oldList ];
+        // 旧对话逻辑，将该对话置顶
+        if (thread_id) {
+          const exists = oldList.find(t => t.thread_id === thread_id);
+          if (exists) {
+            const filtered = oldList.filter(t => t.thread_id !== thread_id);
+            return [exists, ...filtered];
+          }
         }
+
+        // 新对话逻辑，加入临时对话
+        const optimisticThread: ChatThread = {
+          thread_id: optimisticThreadId,
+          summary: content, // 标题为首条消息
+          last_id: new Date().toISOString()
+        };
+        return [ optimisticThread, ...oldList ];
       });
 
-      // 4. 乐观更新消息历史
-      const userMsg: ChatMessage = {
-        id: chatKeys.temp_user,
-        role: 'user',
-        content: content
-      };
-      const aiMsg: ChatMessage = {
-        id: chatKeys.temp_ai,
-        role: 'assistant',
-        content: '' // 初始为空，由 onChunk 更新
-      };
-      queryClient.setQueryData<ChatMessage[]>(chatKeys.history(graph, thread_id), (old) => {
-        return [ ...(old ?? []), userMsg, aiMsg ];
-      });
+      // 历史记录乐观更新（仅当 thread_id 已知）
+      let previousHistory: ChatMessage[] | undefined;
+      if (thread_id) {
+        await queryClient.cancelQueries({ queryKey: chatKeys.history(graph, thread_id) });
+        previousHistory = queryClient.getQueryData<ChatMessage[]>(chatKeys.history(graph, thread_id));
 
-      return { previousThreads, previousHistory };
+        const userMsg: ChatMessage = {
+          id: chatKeys.temp_user,
+          role: 'user',
+          content: content
+        };
+        const aiMsg: ChatMessage = {
+          id: chatKeys.temp_ai,
+          role: 'assistant',
+          content: '' // 初始为空，由 onChunk 更新
+        };
+        queryClient.setQueryData<ChatMessage[]>(chatKeys.history(graph, thread_id), (old) => {
+          return [ ...(old ?? []), userMsg, aiMsg ];
+        });
+      }
+      return { previousThreads, previousHistory, optimisticThreadId };
     },
     onError: (error, variables, context) => {
-      console.log(error);
-      const { thread_id, onError } = variables;
+      console.error(error);
+      const { onError } = variables;
 
       // 1. 回滚侧边栏
       if (context?.previousThreads) {
@@ -133,8 +139,8 @@ export function useChatAction(graph: string = '') {
       }
 
       // 2. 回滚历史记录
-      if (context?.previousHistory) {
-        queryClient.setQueryData(chatKeys.history(graph, thread_id), context.previousHistory);
+      if (context?.previousHistory && variables.thread_id) {
+        queryClient.setQueryData(chatKeys.history(graph, variables.thread_id), context.previousHistory);
       }
 
       // 3. 执行回调

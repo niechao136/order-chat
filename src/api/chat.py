@@ -1,4 +1,5 @@
 import json
+import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,7 +12,8 @@ from src.order_agent.graph import create_order_graph
 from src.schemas.auth import TokenDict
 from src.schemas.chat import ThreadItem, ChatReq, ChatMessage
 from src.schemas.page import NoPageResult
-from src.utils.jwt import get_current_user
+from src.utils.chat import check_thread_access
+from src.utils.jwt import get_chat_user
 
 
 chat_router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -28,12 +30,16 @@ async def get_graph_by_name(graph: str):
 
 
 @chat_router.get("", response_model=List[str])
-async def get_graph(_: TokenDict = Depends(get_current_user)):
+async def get_graph(_: TokenDict = Depends(get_chat_user)):
     return GRAPH_LIST
 
 
 @chat_router.get("/{graph}", response_model=NoPageResult[ThreadItem])
-async def get_all_threads(graph: str, user: TokenDict = Depends(get_current_user)):
+async def get_all_threads(
+        graph: str,
+        user_identifier: str = Depends(get_chat_user),
+        pool = Depends(get_db_pool)
+):
     """
     查看某个 Graph 下所有的历史对话列表（从 Postgres 聚合 thread_id）。
     """
@@ -41,28 +47,18 @@ async def get_all_threads(graph: str, user: TokenDict = Depends(get_current_user
     if not agent:
         raise HTTPException(status_code=404, detail=f"Graph {graph} not found")
 
-    pool = await get_db_pool()
-    thread_pattern = f"{graph}:user_{user.id}_%"
 
     async with pool.connection() as conn:
-        cur = await conn.execute(
-            """
-            SELECT thread_id, MAX(checkpoint_id) as last_update
-            FROM checkpoints
-            WHERE thread_id LIKE %s
-            GROUP BY thread_id
-            ORDER BY last_update DESC
-            """, (thread_pattern,))
+        cur = await conn.execute("""
+        SELECT t.thread_id, MAX(c.checkpoint_id) AS last_update
+        FROM chat_thread_users t
+                LEFT JOIN checkpoints c ON t.thread_id = c.thread_id
+        WHERE t.user_identifier = %s AND t.graph = %s
+        GROUP BY t.thread_id
+        ORDER BY last_update DESC NULLS LAST
+        """, (user_identifier, graph))
         rows = await cur.fetchall()
-
-        cur = await conn.execute(
-            """
-            SELECT COUNT(DISTINCT thread_id)
-            FROM checkpoints
-            WHERE thread_id LIKE %s
-            """, (thread_pattern,))
-        row_count = await cur.fetchone()
-        total = row_count.get("count") if isinstance(row_count, dict) else row_count[0]
+        total = len(rows)
 
     res = []
     for t in rows:
@@ -94,8 +90,13 @@ async def get_all_threads(graph: str, user: TokenDict = Depends(get_current_user
     )
 
 
-@chat_router.post("/{graph}/{thread_id}")
-async def send_message_stream(graph: str, thread_id: str, req: ChatReq):
+@chat_router.post("/{graph}/stream")
+async def send_message_stream(
+        graph: str,
+        req: ChatReq,
+        user_identifier: str = Depends(get_chat_user),
+        pool = Depends(get_db_pool)
+):
     """
     发送消息并获取回复。
     """
@@ -103,14 +104,27 @@ async def send_message_stream(graph: str, thread_id: str, req: ChatReq):
     if not agent:
         raise HTTPException(status_code=404, detail=f"Graph {graph} not found")
 
-    scoped_thread_id = f"{graph}:{thread_id}"
-    config = {
-        "configurable": {
-            "thread_id": scoped_thread_id
-        }
-    }
+    thread_id = req.thread_id
+    # 若未提供 thread_id，则新建会话并插入关联
+    if not thread_id:
+        thread_id = str(uuid.uuid4())
+        async with pool.connection() as conn:
+            await conn.execute(
+                "INSERT INTO chat_thread_users (thread_id, user_identifier, graph) VALUES (%s, %s, %s)",
+                (thread_id, user_identifier, graph)
+            )
+    else:
+        # 权限校验
+        async with pool.connection() as conn:
+            if not await check_thread_access(thread_id, user_identifier, conn):
+                raise HTTPException(status_code=403, detail="Access denied")
+
+    config = {"configurable": {"thread_id": thread_id}}
 
     async def event_generator():
+        # 首先告知前端最终的 thread_id（如果是新建的，前端需要保存）
+        yield f"data: {json.dumps({'type': 'thread_id', 'thread_id': thread_id})}\n\n"
+
         input_data = {"messages": [HumanMessage(content=req.message)]}
 
         async for msg, metadata in agent.astream(
@@ -122,7 +136,7 @@ async def send_message_stream(graph: str, thread_id: str, req: ChatReq):
             # metadata 中包含 langgraph_node，可以用来判断当前是哪个节点在说话
             if isinstance(msg, BaseMessageChunk):
                 # 按照 SSE 规范格式化：data: <内容>\n\n
-                yield f"data: {json.dumps({'content': msg.content, 'type': msg.type, 'node': metadata.get('langgraph_node')})}\n\n"
+                yield f"data: {json.dumps({'content': msg.content, 'node': metadata.get('langgraph_node')})}\n\n"
 
         # 结束后发送一个特定的标记，方便前端关闭连接
         yield "data: [DONE]\n\n"
@@ -139,7 +153,12 @@ async def send_message_stream(graph: str, thread_id: str, req: ChatReq):
 
 
 @chat_router.get("/{graph}/{thread_id}", response_model=NoPageResult[ChatMessage])
-async def get_chat_history(graph: str, thread_id: str):
+async def get_chat_history(
+        graph: str,
+        thread_id: str,
+        user_identifier: str = Depends(get_chat_user),
+        pool = Depends(get_db_pool)
+):
     """
     获取某个对话的完整历史记录。
     """
@@ -147,13 +166,11 @@ async def get_chat_history(graph: str, thread_id: str):
     if not agent:
         raise HTTPException(status_code=404, detail=f"Graph {graph} not found")
 
-    scoped_thread_id = f"{graph}:{thread_id}"
-    config = {
-        "configurable": {
-            "thread_id": scoped_thread_id
-        }
-    }
+    async with pool.connection() as conn:
+        if not await check_thread_access(thread_id, user_identifier, conn):
+            raise HTTPException(status_code=403, detail="Access denied")
 
+    config = {"configurable": {"thread_id": thread_id}}
     state = await agent.aget_state(config)
 
     if not state or not state.values:
@@ -172,7 +189,7 @@ async def get_chat_history(graph: str, thread_id: str):
         elif isinstance(msg, AIMessage) and not msg.tool_calls:
             if isinstance(msg.content, str):
                 content = msg.content
-            else:
+            elif isinstance(msg.content, list):
                 first_item = msg.content[0] or ""
                 if isinstance(first_item, dict):
                     content = first_item.get("text", "")
@@ -183,6 +200,5 @@ async def get_chat_history(graph: str, thread_id: str):
                 role="assistant",
                 content=content
             ))
-
 
     return NoPageResult(total=len(data), data=data)

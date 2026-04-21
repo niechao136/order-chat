@@ -24,7 +24,7 @@ export interface PageParams {
   keyword?: string
 }
 
-export interface RequiredPageParams extends PageParams {
-  page: number
-  size: number
+
+export interface ApiRequestOptions extends RequestInit {
+  requireAuth?: boolean;
 }

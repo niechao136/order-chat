@@ -3,7 +3,6 @@
 import { Send, Sparkles } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { v7 } from 'uuid';
 
 import { useParams, useRouter } from 'next/navigation';
 
@@ -11,7 +10,6 @@ import { MessageList } from '@/components/chat/message-list';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChatAction, useHistory, chatKeys } from '@/hooks/use-chat';
-import { useOwner } from '@/hooks/use-user';
 
 export default function GraphPage() {
 
@@ -24,7 +22,6 @@ export default function GraphPage() {
   const [streamingContent, setStreamingContent] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
 
-  const { data: owner } = useOwner();
   const { sendMsg } = useChatAction(graph);
   const { data: history } = useHistory(graph, threadId ?? '');
 
@@ -41,16 +38,14 @@ export default function GraphPage() {
 
     if (!input.trim()) return;
 
-    const thread_id = `user_${owner?.id}_${v7()}`;
     const content = input;
 
     setInput('');
-    setThreadId(thread_id);
     setStreamingContent('');
     setIsStreaming(true);
 
     sendMsg.mutate({
-      thread_id,
+      thread_id: null,
       content,
       onChunk: (chunk: string) => {
         setStreamingContent(prev => prev + chunk);
@@ -64,7 +59,12 @@ export default function GraphPage() {
       onFinished: () => {
         setIsStreaming(false);
         // 流结束后跳转，此时侧边栏已经有了（乐观更新注入的），不会有空档期
-        router.replace(`/chat/${graph}/${thread_id}`, { scroll: false });
+        if (threadId) {
+          router.replace(`/chat/${graph}/${threadId}`, { scroll: false });
+        }
+      },
+      onThreadCreated: (newThreadId: string) => {
+        setThreadId(newThreadId);
       },
     });
   };

@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class ThreadItem(BaseModel):
@@ -8,7 +9,9 @@ class ThreadItem(BaseModel):
 
 
 class ChatReq(BaseModel):
+    thread_id: Optional[str] = None
     message: str
+
 
 class ChatMessage(BaseModel):
     id: str

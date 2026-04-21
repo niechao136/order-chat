@@ -1,6 +1,5 @@
 from enum import Enum
 from pydantic import BaseModel
-from typing import Union
 
 
 class UserRole(str, Enum):
@@ -21,14 +20,3 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
-
-class TokenSuccessResponse(BaseModel):
-    status: int = 1
-    access_token: str
-    role: UserRole
-
-class TokenErrorResponse(BaseModel):
-    status: int = 0
-    error_msg: str
-
-TokenResponse = Union[TokenSuccessResponse, TokenErrorResponse]

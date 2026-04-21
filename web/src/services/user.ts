@@ -17,9 +17,18 @@ export async function getUserCount() {
 }
 
 export async function getOwnerInfo() {
-  const res = await apiRequest('user/me')
-  const data: DataResult<UserInfo> = await res.json()
-  return data
+  try {
+    const res = await apiRequest('user/me', { requireAuth: false });
+    const data: DataResult<UserInfo> = await res.json();
+    return data;
+  } catch (error) {
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      // Token 无效，返回匿名状态
+      const data: DataResult<null> = { status: 0, data: null, msg: 'Not logged in' };
+      return data;
+    }
+    throw error;
+  }
 }
 
 export async function getUserInfo(user_id: string) {

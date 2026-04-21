@@ -1,4 +1,5 @@
 import Cookies from 'js-cookie';
+import { ApiRequestOptions } from '@/types/api'
 
 
 export async function getToken() {
@@ -23,7 +24,8 @@ export function getBaseUrl() {
 }
 
 
-export async function apiRequest(url: string, options: RequestInit = {}) {
+export async function apiRequest(url: string, options: ApiRequestOptions = {}) {
+  const { requireAuth = true, ...fetchOptions } = options;
   const token = await getToken();
   const baseUrl = getBaseUrl();
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
@@ -38,12 +40,13 @@ export async function apiRequest(url: string, options: RequestInit = {}) {
   }
 
   const response = await fetch(`${baseUrl}${cleanUrl}`, {
-    ...options,
-    headers: { ...defaultHeaders, ...options.headers },
+    credentials: 'include', // 确保 Cookie 发送
+    ...fetchOptions,
+    headers: { ...defaultHeaders, ...fetchOptions.headers },
   });
 
   if (response.status === 401) {
-    if (typeof window !== 'undefined') {
+    if (requireAuth && typeof window !== 'undefined') {
       handleLogout();
     }
     throw new Error('UNAUTHORIZED');

@@ -10,6 +10,7 @@ import {
 import { useState } from 'react'
 
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
 import {
   Avatar,
@@ -41,10 +42,38 @@ export function NavUser({ mode, owner }: {
   owner: UserInfo | null;
 }) {
 
+  const params = useParams();
+  const graph = params.graph as string;
+
   const { isMobile } = useSidebar();
 
   const [ open, setOpen ] = useState(false);
 
+  // 判断是否未登录（匿名或 null）
+  const isAnonymous = !owner || owner.id === 'anon';
+
+  // 未登录时显示登录按钮
+  if (isAnonymous) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild size="lg">
+            <Link href={`/login?graph=${graph}`}>
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarFallback className="rounded-lg">访</AvatarFallback>
+              </Avatar>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">登录 / 注册</span>
+                <span className="truncate text-xs">体验完整功能</span>
+              </div>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
+
+  // 已登录用户的原有下拉菜单
   return (
     <>
       <SidebarMenu>

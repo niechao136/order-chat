@@ -5,7 +5,7 @@ from src.database.postgre import get_db_pool
 from src.schemas.auth import TokenDict
 from src.schemas.page import PageResult, PageParams, DataResult
 from src.schemas.user import UserInfo, UserAdd, UserUpdate, UserPassword, UserDel
-from src.utils.jwt import get_current_admin, get_current_user
+from src.utils.jwt import get_current_admin, get_current_user, get_chat_user
 from src.utils.api import hand_id
 from src.utils.pwd import pwd_context
 
@@ -69,8 +69,7 @@ async def user_count(_: TokenDict = Depends(get_current_admin)):
 
 
 @user_router.get("/me", response_model=DataResult[UserInfo])
-async def current_user(user: TokenDict = Depends(get_current_user)):
-    pool = await get_db_pool()
+async def current_user(user: TokenDict = Depends(get_current_user), pool = Depends(get_db_pool)):
     async with pool.connection() as conn:
         cur = await conn.execute(
             """

@@ -8,14 +8,14 @@ import { toast } from 'sonner';
 import * as z from 'zod';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldLabel, FieldGroup, FieldSet, FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useChatAction } from '@/hooks/use-chat';
-import { register } from '@/services/auth';
+import { useAuthAction } from '@/hooks/use-auth';
+import { useGraph } from '@/hooks/use-chat';
 
 const formSchema = z.object({
   username: z
@@ -46,39 +46,47 @@ const formSchema = z.object({
   path: ["reply_pwd"], // 错误信息会绑定在 reply_pwd 字段上
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const graphParam = searchParams.get('graph');
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { username: '', password: '', reply_pwd: '' }
   });
-  const { formState: { isSubmitting } } = form;
-  const { fetchGraph } = useChatAction()
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const { signUp, clearCache } = useAuthAction();
+  const { data: graphs } = useGraph();
+
+  async function onSubmit(values: FormValues) {
     const req = {
       username: values.username,
       email: values.email,
       password: values.password
-    }
+    };
+    const body = JSON.stringify(req);
+    signUp.mutate(body, {
+      onSuccess: async (res) => {
+        Cookies.set('token', res?.data ?? '', { expires: 1, path: '/' });
 
-    const data = await register(JSON.stringify(req))
+        await clearCache();
 
-    if (!data?.access_token) {
-        toast.error('登录失败，请检查账号密码')
-        return
-      }
+        if (!graphs?.[0]) {
+          toast.error('目前没有可用的 Graph');
+          return;
+        }
 
-    Cookies.set('token', data.access_token, { expires: 1, path: '/' });
+        const graph = graphs?.includes(graphParam ?? '') ? graphParam : graphs?.[0];
 
-    const graph = await fetchGraph()
-
-    if (!graph[0]) {
-      toast.error('目前没有可用的 Graph')
-      return
-    }
-
-    router.push(`/chat/${graph[0]}`);
+        router.push(`/chat/${graph}`);
+      },
+      onError: (err) => {
+        toast.error(err?.message || '注册失败');
+      },
+    });
   }
 
   return (
@@ -171,15 +179,20 @@ export default function RegisterPage() {
             </FieldGroup>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={signUp.isPending}
               className="w-full bg-blue-600 hover:bg-blue-700">
-              {isSubmitting ? '正在注册...' : '立即注册'}
+              {signUp.isPending ? '正在注册...' : '立即注册'}
             </Button>
           </FieldSet>
         </form>
       </CardContent>
       <CardFooter className="justify-center text-sm text-slate-500">
-        已有账号！<Link href={'/login'} className="text-blue-600 hover:underline ml-1">立即登录</Link>
+        已有账号！
+        <Link
+          href={`/login${!!graphs?.includes(graphParam ?? '') ? `?graph=${graphParam}` : ''}`}
+          className="text-blue-600 hover:underline ml-1">
+          立即登录
+        </Link>
       </CardFooter>
     </Card>
   );

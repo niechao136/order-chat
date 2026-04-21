@@ -195,4 +195,26 @@ async def init_db():
             END $$;
             """)
 
+            # ---------- 创建用户与会话关联表 ----------
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS chat_thread_users
+            (
+                thread_id       VARCHAR(255) NOT NULL,
+                user_identifier VARCHAR(255) NOT NULL,
+                graph           VARCHAR(50)  NOT NULL,
+                created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (thread_id, user_identifier)
+            )
+            """)
+
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_chat_thread_users_user_graph
+                ON chat_thread_users (user_identifier, graph);
+            """)
+
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_chat_thread_users_thread_id
+                ON chat_thread_users (thread_id);
+            """)
+
             print("数据库初始化完成：Schema 创建成功，管理员用户已就绪。")

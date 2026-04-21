@@ -2,20 +2,19 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Cookies from 'js-cookie';
-import * as React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
 import * as z from 'zod';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldLabel, FieldGroup, FieldSet, FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useChatAction } from '@/hooks/use-chat';
-import { login } from '@/services/auth'
+import { useAuthAction } from '@/hooks/use-auth';
+import { useGraph } from '@/hooks/use-chat';
 
 // 定义表单校验规则
 const formSchema = z.object({
@@ -23,33 +22,42 @@ const formSchema = z.object({
   password: z.string().trim().min(1, { message: '密码不能为空' })
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const graphParam = searchParams.get('graph');
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { username: '', password: '' }
   });
-  const { formState: { isSubmitting } } = form;
-  const { fetchGraph } = useChatAction()
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    const data = await login(JSON.stringify(values))
+  const { signIn, clearCache } = useAuthAction();
+  const { data: graphs } = useGraph();
 
-    if (!data?.access_token) {
-      toast.error('登录失败，请检查账号密码')
-      return
-    }
+  async function onSubmit(values: FormValues) {
+    const body = JSON.stringify(values);
+    signIn.mutate(body, {
+      onSuccess: async (res) => {
+        Cookies.set('token', res?.data ?? '', { expires: 1, path: '/' });
 
-    Cookies.set('token', data.access_token, { expires: 1, path: '/' });
+        await clearCache();
 
-    const graph = await fetchGraph()
+        if (!graphs?.[0]) {
+          toast.error('目前没有可用的 Graph');
+          return;
+        }
 
-    if (!graph?.[0]) {
-      toast.error('目前没有可用的 Graph')
-      return
-    }
+        const graph = graphs?.includes(graphParam ?? '') ? graphParam : graphs?.[0];
 
-    router.push(`/chat/${graph[0]}`);
+        router.push(`/chat/${graph}`);
+      },
+      onError: (err) => {
+        toast.error(err?.message || '登录失败，请检查账号密码');
+      },
+    });
   }
 
   return (
@@ -103,15 +111,20 @@ export default function LoginPage() {
             </FieldGroup>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={signIn.isPending}
               className="w-full bg-blue-600 hover:bg-blue-700">
-              {isSubmitting ? '正在登录...' : '立即登录'}
+              {signIn.isPending ? '正在登录...' : '立即登录'}
             </Button>
           </FieldSet>
         </form>
       </CardContent>
       <CardFooter className="justify-center text-sm text-slate-500">
-        还没有账号？<Link href={'/register'} className="text-blue-600 hover:underline ml-1">立即注册</Link>
+        还没有账号？
+        <Link
+          href={`/register${!!graphs?.includes(graphParam ?? '') ? `?graph=${graphParam}` : ''}`}
+          className="text-blue-600 hover:underline ml-1">
+          立即注册
+        </Link>
       </CardFooter>
     </Card>
   );
