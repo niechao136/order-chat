@@ -2,6 +2,7 @@
 
 import {
   DatabaseSearchIcon,
+  KeyRoundIcon,
   UserRoundIcon,
 } from 'lucide-react';
 import { useMemo, ReactNode, Fragment } from 'react';
@@ -56,6 +57,11 @@ export function AdminBody({ children }: {
         href: '/user',
         title: '用户管理',
         icon: UserRoundIcon,
+      },
+      {
+        href: '/api-key',
+        title: '密钥管理',
+        icon: KeyRoundIcon,
       },
     ];
     return list;

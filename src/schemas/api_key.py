@@ -1,7 +1,23 @@
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
+
+from .page import PageParams
+
+
+# ---------- 扩展 PageParams，添加字段白名单校验 ----------
+class ApiKeyPageParams(PageParams):
+    order_by: Optional[str] = Field("created_at", description="排序字段")
+
+    @field_validator('order_by')
+    @classmethod
+    def validate_order_by(cls, v):
+        # 允许排序的字段白名单
+        allowed_fields = {'created_at', 'last_used_at', 'expires_at', 'name', 'is_active'}
+        if v and v not in allowed_fields:
+            raise ValueError(f'排序字段必须在 {allowed_fields} 内')
+        return v
 
 
 # ---------- 创建密钥请求 ----------
@@ -16,6 +32,11 @@ class CreateApiKeyRequest(BaseModel):
 # ---------- 切换状态请求 ----------
 class ToggleApiKeyRequest(BaseModel):
     is_active: bool = Field(..., description="是否启用")
+
+
+# ---------- 删除密钥请求 ----------
+class DeleteApiKeyRequest(BaseModel):
+    ids: List[UUID] = Field(..., description="删除密钥的id数组")
 
 
 # ---------- 响应模型 ----------
