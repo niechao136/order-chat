@@ -11,7 +11,7 @@ from psycopg_pool import AsyncConnectionPool
 from psycopg import AsyncConnection
 from psycopg.rows import dict_row
 
-from src.utils.pwd import pwd_context
+from src.utils.security import pwd_context
 
 
 load_dotenv()
@@ -215,6 +215,59 @@ async def init_db():
             await conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_chat_thread_users_thread_id
                 ON chat_thread_users (thread_id);
+            """)
+
+            # ---------- 创建 API 密钥表 ----------
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS api_keys
+            (
+                id           UUID PRIMARY KEY         DEFAULT gen_random_uuid(),
+                user_id      INTEGER REFERENCES users (id) ON DELETE CASCADE,
+                name         VARCHAR(100)        NOT NULL,
+                key_hash     VARCHAR(255) UNIQUE NOT NULL,
+                prefix       VARCHAR(8)          NOT NULL,
+                permissions  JSONB                    DEFAULT '[]'::jsonb,
+                rate_limit   INTEGER                  DEFAULT 0,
+                created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                last_used_at TIMESTAMP WITH TIME ZONE,
+                expires_at   TIMESTAMP WITH TIME ZONE,
+                is_active    BOOLEAN                  DEFAULT TRUE,
+                description  TEXT
+            )
+            """)
+
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys (prefix);
+            """)
+
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys (user_id);
+            """)
+
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys (expires_at) WHERE expires_at IS NOT NULL;
+            """)
+
+            # ---------- 创建 API 密钥使用日志表 ----------
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS api_key_usage
+            (
+                id              BIGSERIAL PRIMARY KEY,
+                key_id          UUID REFERENCES api_keys (id) ON DELETE SET NULL,
+                endpoint        VARCHAR(200),
+                ip_address      INET,
+                user_agent      TEXT,
+                response_status INTEGER,
+                created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
+
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_key_usage_key_id ON api_key_usage (key_id);
+            """)
+
+            await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_key_usage_created_at ON api_key_usage (created_at);
             """)
 
             print("数据库初始化完成：Schema 创建成功，管理员用户已就绪。")

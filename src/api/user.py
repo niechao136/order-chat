@@ -7,7 +7,7 @@ from src.schemas.page import PageResult, PageParams, DataResult
 from src.schemas.user import UserInfo, UserAdd, UserUpdate, UserPassword, UserDel
 from src.utils.jwt import get_current_admin, get_current_user
 from src.utils.api import hand_id
-from src.utils.pwd import pwd_context
+from src.utils.security import pwd_context
 
 
 user_router = APIRouter(prefix="/user", tags=["User"])

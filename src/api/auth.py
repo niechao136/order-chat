@@ -5,7 +5,7 @@ from src.schemas.auth import UserRegister, UserLogin, UserRole, TokenDict
 from src.schemas.page import DataResult
 from src.utils.jwt import create_access_token, get_anon_identifier_from_cookie
 from src.utils.chat import merge_anonymous_threads_to_user
-from src.utils.pwd import pwd_context
+from src.utils.security import pwd_context
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 

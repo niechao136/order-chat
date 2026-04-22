@@ -1,5 +1,19 @@
 from psycopg import AsyncConnection
 
+from src.find_agent.graph import create_find_graph
+from src.order_agent.graph import create_order_graph
+
+
+GRAPH_LIST = ["find", "order"]
+
+
+async def get_graph_by_name(graph: str):
+    if graph == "find":
+        return await create_find_graph()
+    if graph == "order":
+        return await create_order_graph()
+    return None
+
 
 async def check_thread_access(thread_id: str, user_identifier: str, conn) -> bool:
     cur = await conn.execute(

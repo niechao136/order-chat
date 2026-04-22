@@ -7,26 +7,14 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import BaseMessage, HumanMessage, BaseMessageChunk, AIMessage
 
 from src.database.postgre import get_db_pool
-from src.find_agent.graph import create_find_graph
-from src.order_agent.graph import create_order_graph
 from src.schemas.auth import TokenDict
 from src.schemas.chat import ThreadItem, ChatReq, ChatMessage
 from src.schemas.page import NoPageResult
-from src.utils.chat import check_thread_access
+from src.utils.chat import check_thread_access, GRAPH_LIST, get_graph_by_name
 from src.utils.jwt import get_chat_user
 
 
 chat_router = APIRouter(prefix="/chat", tags=["Chat"])
-
-
-GRAPH_LIST = ["find", "order"]
-
-async def get_graph_by_name(graph: str):
-    if graph == "find":
-        return await create_find_graph()
-    if graph == "order":
-        return await create_order_graph()
-    return None
 
 
 @chat_router.get("", response_model=List[str])
