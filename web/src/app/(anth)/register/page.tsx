@@ -1,7 +1,6 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import Cookies from 'js-cookie';
 import * as React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -16,6 +15,8 @@ import { Field, FieldLabel, FieldGroup, FieldSet, FieldError } from '@/component
 import { Input } from '@/components/ui/input';
 import { useAuthAction } from '@/hooks/use-auth';
 import { useGraph } from '@/hooks/use-chat';
+import { setCookie, TOKEN_COOKIE } from '@/utils/cookie';
+
 
 const formSchema = z.object({
   username: z
@@ -73,7 +74,7 @@ export default function RegisterPage() {
     const body = JSON.stringify(req);
     signUp.mutate(body, {
       onSuccess: async (res) => {
-        Cookies.set('token', res?.data ?? '', { expires: 1, path: '/' });
+        setCookie(TOKEN_COOKIE, res?.data ?? '', { expires: 1, path: '/' });
 
         await clearCache();
 

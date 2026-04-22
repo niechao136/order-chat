@@ -1,7 +1,6 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import Cookies from 'js-cookie';
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
 import * as z from 'zod';
@@ -13,8 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldLabel, FieldGroup, FieldSet, FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+
 import { useAuthAction } from '@/hooks/use-auth';
 import { useGraph } from '@/hooks/use-chat';
+import { setCookie, TOKEN_COOKIE } from '@/utils/cookie';
+
 
 // 定义表单校验规则
 const formSchema = z.object({
@@ -44,7 +46,7 @@ export default function LoginPage() {
     const body = JSON.stringify(values);
     signIn.mutate(body, {
       onSuccess: async (res) => {
-        Cookies.set('token', res?.data ?? '', { expires: 1, path: '/' });
+        setCookie(TOKEN_COOKIE, res?.data ?? '', { expires: 1, path: '/' });
 
         await clearCache();
 

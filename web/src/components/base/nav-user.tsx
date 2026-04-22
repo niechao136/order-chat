@@ -11,6 +11,7 @@ import { useState } from 'react';
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import {
   Avatar,
@@ -29,11 +30,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar
+  useSidebar,
 } from '@/components/ui/sidebar';
-import { ChangePassword } from '@/components/base/change-pwd'
+import { ChangePassword } from '@/components/base/change-pwd';
+
+import { useAuthAction } from '@/hooks/use-auth';
 import { handleLogout } from '@/services/api';
 import { UserInfo } from '@/types/user';
+import { removeCookie, TOKEN_COOKIE } from '@/utils/cookie';
 import { getInitials } from '@/utils/string';
 
 
@@ -44,13 +48,16 @@ export function NavUser({ mode, owner }: {
 
   const params = useParams();
   const graph = params.graph as string;
+  const router = useRouter();
 
   const { isMobile } = useSidebar();
+
+  const { clearCache } = useAuthAction();
 
   const [ open, setOpen ] = useState(false);
 
   // 判断是否未登录（匿名或 null）
-  const isAnonymous = !owner || owner.id === 'anon';
+  const isAnonymous = !owner;
 
   // 未登录时显示登录按钮
   if (isAnonymous) {
@@ -72,6 +79,17 @@ export function NavUser({ mode, owner }: {
       </SidebarMenu>
     );
   }
+
+
+  const logout = async () => {
+    if (mode === 'admin') {
+      handleLogout();
+      return;
+    }
+    removeCookie(TOKEN_COOKIE);
+    await clearCache();
+    router.replace(`/chat/${graph}`);
+  };
 
   // 已登录用户的原有下拉菜单
   return (
@@ -144,7 +162,7 @@ export function NavUser({ mode, owner }: {
                 修改密码
               </DropdownMenuItem>
               <DropdownMenuSeparator/>
-              <DropdownMenuItem onClick={() => handleLogout()}>
+              <DropdownMenuItem onClick={() => logout()}>
                 <LogOutIcon/>
                 登出
               </DropdownMenuItem>
