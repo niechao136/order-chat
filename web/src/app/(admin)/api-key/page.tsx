@@ -10,6 +10,7 @@ import {
   SearchIcon,
 } from 'lucide-react';
 import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +27,7 @@ import {
 
 import { TablePaging } from '@/components/base/pagination';
 import { AddApiKey } from '@/components/api-key/add-api-key';
+import { ApiKeyStatus } from '@/components/api-key/api-key-status';
 import { BatchDeleteApiKey } from '@/components/api-key/batch-delete-api-key';
 import { DeleteApiKey } from '@/components/api-key/delete-api-key';
 import { ToggleApiKey } from '@/components/api-key/toggle-api-key';
@@ -33,7 +35,6 @@ import { ToggleApiKey } from '@/components/api-key/toggle-api-key';
 import { useApiKey } from '@/hooks/use-api-key';
 import { usePagingStore } from '@/stores/paging';
 import { formatTimeStr } from '@/utils/time';
-import { toast } from 'sonner'
 
 
 type SortableField = 'name' | 'is_active' | 'expires_at' | 'last_used_at' | 'created_at';
@@ -69,7 +70,7 @@ export default function ApiKeysPage() {
     debouncedSetSearch(value);
   };
 
-    const handleSearchSubmit = () => {
+  const handleSearchSubmit = () => {
     debouncedSetSearch.cancel();
     setSearch(pagingKey, keyword);
   };
@@ -107,7 +108,9 @@ export default function ApiKeysPage() {
   const sortableHeaderClass = "cursor-pointer select-none hover:bg-muted/50 transition-colors";
 
   const allowCheck = useMemo(() => {
-    return (data?.data ?? []).filter(o => !o.is_active).map(r => r.id)
+    return (data?.data ?? [])
+      .filter(o => !o.is_active || (o.expires_at && new Date(o.expires_at) < new Date()))
+      .map(r => r.id)
   }, [data]);
 
   const copyToClipboard = async (text: string) => {
@@ -121,7 +124,7 @@ export default function ApiKeysPage() {
         <CardHeader className="py-4 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base font-semibold">现有密钥</CardTitle>
-            <CardDescription>所有已创建的 API 密钥，可随时禁用或删除。</CardDescription>
+            <CardDescription>所有已创建的 API 密钥，可随时停用或删除。</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative w-64">
@@ -161,9 +164,9 @@ export default function ApiKeysPage() {
                     </div>
                   </TableHead>
                   <TableHead>密钥</TableHead>
-                  <TableHead className={`${sortableHeaderClass} w-[140px]`} onClick={() => handleSort('is_active')}>
+                  <TableHead className={`w-[140px]`}>
                     <div className="flex items-center">
-                      状态 {renderSortIcon('is_active')}
+                      状态
                     </div>
                   </TableHead>
                   <TableHead className={`${sortableHeaderClass}`} onClick={() => handleSort('expires_at')}>
@@ -202,26 +205,34 @@ export default function ApiKeysPage() {
                     <TableRow key={api_key.id} className="group hover:bg-muted/30 transition-colors">
                       <TableCell className="text-center">
                         <Checkbox
-                          disabled={api_key.is_active}
+                          disabled={!allowCheck.includes(api_key.id)}
                           checked={selectedIds.includes(api_key.id)}
                           onCheckedChange={() => setSelectedIds(prev => prev.includes(api_key.id) ? prev.filter(i => i !== api_key.id) : [ ...prev, api_key.id ])}
                         />
                       </TableCell>
-                      <TableCell className="py-4">{api_key.name}</TableCell>
+                      <TableCell className="py-4">
+                        {api_key.name}
+                      </TableCell>
                       <TableCell className="py-4">
                         <code className="bg-muted px-2 py-1 rounded text-xs">
                           {api_key.prefix}****
                         </code>
                       </TableCell>
                       <TableCell className="py-4">
-                        <span className={api_key.is_active ? 'text-green-600' : 'text-muted-foreground'}>
-                          {api_key.is_active ? '启用' : '禁用'}
-                        </span>
+                        <ApiKeyStatus info={api_key}/>
                       </TableCell>
-                      <TableCell className="py-4">{api_key.expires_at ? formatTimeStr(api_key.expires_at) : '永不过期'}</TableCell>
-                      <TableCell className="py-4">{api_key.last_used_at ? formatTimeStr(api_key.last_used_at) : '从未使用'}</TableCell>
-                      <TableCell className="py-4">{formatTimeStr(api_key.created_at)}</TableCell>
-                      <TableCell className="py-4">{api_key.description}</TableCell>
+                      <TableCell className="py-4">
+                        {api_key.expires_at ? formatTimeStr(api_key.expires_at) : '永不过期'}
+                      </TableCell>
+                      <TableCell className="py-4">
+                        {api_key.last_used_at ? formatTimeStr(api_key.last_used_at) : '从未使用'}
+                      </TableCell>
+                      <TableCell className="py-4">
+                        {formatTimeStr(api_key.created_at)}
+                      </TableCell>
+                      <TableCell className="py-4">
+                        {api_key.description}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <ToggleApiKey info={api_key}/>
@@ -233,7 +244,7 @@ export default function ApiKeysPage() {
                             onClick={() => copyToClipboard(api_key.key)}>
                             <CopyIcon className="h-4 w-4"/>
                           </Button>
-                          <DeleteApiKey info={api_key} disabled={api_key.is_active}/>
+                          <DeleteApiKey info={api_key} disabled={!allowCheck.includes(api_key.id)}/>
                         </div>
                       </TableCell>
                     </TableRow>

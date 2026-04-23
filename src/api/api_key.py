@@ -8,7 +8,7 @@ from src.schemas.api_key import ApiKeyItem, ApiKeyCreatedResponse, CreateApiKeyR
 from src.schemas.auth import TokenDict
 from src.schemas.page import DataResult, PageResult
 from src.utils.jwt import get_current_admin
-from src.utils.security import generate_api_key
+from src.utils.security import generate_api_key, encrypt_api_key, decrypt_api_key
 
 
 api_key_router = APIRouter(prefix="/api_key", tags=["API Key"])
@@ -23,17 +23,19 @@ async def create_api_key(
 ):
     """创建新的 API 密钥（返回一次明文密钥）"""
     plain_key, key_hash, prefix = generate_api_key()
+    key_encrypted = encrypt_api_key(plain_key)
 
     async with pool.connection() as conn:
         cur = await conn.execute("""
-            INSERT INTO api_keys (user_id, name, key_hash, prefix, permissions, rate_limit, expires_at, description)
-            VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s, %s)
+            INSERT INTO api_keys (user_id, name, key_hash, prefix, key_encrypted, permissions, rate_limit, expires_at, description)
+            VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s)
             RETURNING id, created_at
         """, (
             int(current_user.id),
             req.name,
             key_hash,
             prefix,
+            key_encrypted,
             json.dumps(req.permissions),
             req.rate_limit,
             req.expires_at,
@@ -58,8 +60,8 @@ async def list_api_keys(
 ):
     # 基础查询语句（SELECT 部分）
     select_sql = """
-    SELECT ak.id, ak.name, ak.key_hash, ak.prefix, ak.permissions, ak.rate_limit, ak.created_at,
-           ak.last_used_at, ak.expires_at, ak.is_active, ak.description
+    SELECT ak.id, ak.name, ak.key_hash, ak.prefix, ak.key_encrypted, ak.permissions, ak.rate_limit,
+           ak.created_at, ak.last_used_at, ak.expires_at, ak.is_active, ak.description
     FROM api_keys ak
     """
 
@@ -100,10 +102,11 @@ async def list_api_keys(
 
     items = []
     for row in rows:
+        plain_key = decrypt_api_key(row["key_encrypted"]) if row["key_encrypted"] else ""
         items.append(ApiKeyItem(
             id=row["id"],
             name=row["name"],
-            key=row["key_hash"],
+            key=plain_key,
             prefix=row["prefix"],
             permissions=row["permissions"] or [],
             rate_limit=row["rate_limit"],

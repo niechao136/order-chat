@@ -226,6 +226,7 @@ async def init_db():
                 name         VARCHAR(100)        NOT NULL,
                 key_hash     VARCHAR(255) UNIQUE NOT NULL,
                 prefix       VARCHAR(8)          NOT NULL,
+                key_encrypted BYTEA,
                 permissions  JSONB                    DEFAULT '[]'::jsonb,
                 rate_limit   INTEGER                  DEFAULT 0,
                 created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

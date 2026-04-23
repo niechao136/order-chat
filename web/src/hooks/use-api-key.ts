@@ -18,7 +18,7 @@ export const apiKeys = {
 export function useApiKey(params?: PageParams) {
   return useQuery({
     queryKey: apiKeys.list(params),
-    queryFn: () => getApiKeyList(),
+    queryFn: () => getApiKeyList(params),
     placeholderData: (previousData) => previousData
   });
 }
