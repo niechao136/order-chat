@@ -7,11 +7,11 @@ from src.database.postgre import get_db_pool
 from src.schemas.api_key import ApiKeyItem, ApiKeyCreatedResponse, CreateApiKeyRequest, DeleteApiKeyRequest, ToggleApiKeyRequest, ApiKeyPageParams
 from src.schemas.auth import TokenDict
 from src.schemas.page import DataResult, PageResult
-from src.utils.jwt import get_current_admin
+from src.utils.auth import get_current_admin
 from src.utils.security import generate_api_key, encrypt_api_key, decrypt_api_key
 
 
-api_key_router = APIRouter(prefix="/api_key", tags=["API Key"])
+api_key_router = APIRouter(prefix="/api_key", tags=["API Key"], dependencies=[Depends(get_current_admin)])
 
 
 # ---------- 创建密钥 ----------
@@ -55,7 +55,6 @@ async def create_api_key(
 @api_key_router.get("", response_model=PageResult[ApiKeyItem])
 async def list_api_keys(
     params: ApiKeyPageParams = Depends(),
-    _: TokenDict = Depends(get_current_admin),
     pool = Depends(get_db_pool)
 ):
     # 基础查询语句（SELECT 部分）
@@ -127,7 +126,6 @@ async def list_api_keys(
 # ---------- 密钥总数 ----------
 @api_key_router.get("/count", response_model=DataResult[int])
 async def api_key_count(
-        _: TokenDict = Depends(get_current_admin),
         pool=Depends(get_db_pool)
 ):
     async with pool.connection() as conn:
@@ -141,7 +139,6 @@ async def api_key_count(
 @api_key_router.delete("/delete", response_model=DataResult[List[str]])
 async def revoke_api_key(
     req: DeleteApiKeyRequest,
-    _: TokenDict = Depends(get_current_admin),
     pool = Depends(get_db_pool)
 ):
     async with pool.connection() as conn:
@@ -163,7 +160,6 @@ async def revoke_api_key(
 async def toggle_api_key(
     key_id: UUID,
     req: ToggleApiKeyRequest,
-    _: TokenDict = Depends(get_current_admin),
     pool = Depends(get_db_pool)
 ):
     async with pool.connection() as conn:

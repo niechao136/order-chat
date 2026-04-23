@@ -3,7 +3,6 @@ from fastapi import HTTPException
 from typing import Any, Dict, List, Optional
 from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny, Range, MatchText, PayloadSchemaType
 
-from src.database.postgre import get_db_pool
 from src.schemas.dataset import FilterCondition
 
 
@@ -23,13 +22,13 @@ def check_field_type(value: Any, expected_type: str) -> bool:
 
 async def validate_and_fill_metadata(
         collection_name: str,
-        metadata: List[Dict[str, Any]]
+        metadata: List[Dict[str, Any]],
+        pool
 ):
     """
     根据 collection_fields 表的定义校验 metadata 字段，
     并补全缺失的默认值。
     """
-    pool = await get_db_pool()
     async with pool.connection() as conn:
         cur = await conn.execute(
             """

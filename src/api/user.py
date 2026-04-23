@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends
-from typing import List
+from typing import List, Optional
 
 from src.database.postgre import get_db_pool
 from src.schemas.auth import TokenDict
 from src.schemas.page import PageResult, PageParams, DataResult
 from src.schemas.user import UserInfo, UserAdd, UserUpdate, UserPassword, UserDel
-from src.utils.jwt import get_current_admin, get_current_user
 from src.utils.api import hand_id
+from src.utils.auth import get_current_admin, get_current_user, get_optional_current_user
 from src.utils.security import pwd_context
 
 
@@ -14,8 +14,11 @@ user_router = APIRouter(prefix="/user", tags=["User"])
 
 
 @user_router.get("", response_model=PageResult[UserInfo])
-async def user_list(params: PageParams = Depends(), _: TokenDict = Depends(get_current_admin)):
-    pool = await get_db_pool()
+async def user_list(
+        params: PageParams = Depends(),
+        _: TokenDict = Depends(get_current_admin),
+        pool = Depends(get_db_pool)
+):
     async with pool.connection() as conn:
         base_query = "FROM users WHERE deleted_at IS NULL"
         args = []
@@ -54,11 +57,13 @@ async def user_list(params: PageParams = Depends(), _: TokenDict = Depends(get_c
 
 
 @user_router.get("/count", response_model=DataResult[int])
-async def user_count(_: TokenDict = Depends(get_current_admin)):
+async def user_count(
+        _: TokenDict = Depends(get_current_admin),
+        pool = Depends(get_db_pool)
+):
     """
     获取活跃用户总数（未软删除的用户）
     """
-    pool = await get_db_pool()
     async with pool.connection() as conn:
         cur = await conn.execute(
             "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL"
@@ -69,7 +74,13 @@ async def user_count(_: TokenDict = Depends(get_current_admin)):
 
 
 @user_router.get("/me", response_model=DataResult[UserInfo])
-async def current_user(user: TokenDict = Depends(get_current_user), pool = Depends(get_db_pool)):
+async def current_user(
+        user: Optional[TokenDict] = Depends(get_optional_current_user),
+        pool = Depends(get_db_pool)
+):
+    if not user:
+        return DataResult(status=1, data=None)
+
     async with pool.connection() as conn:
         cur = await conn.execute(
             """
@@ -86,8 +97,11 @@ async def current_user(user: TokenDict = Depends(get_current_user), pool = Depen
 
 
 @user_router.get("/{user_id}", response_model=DataResult[UserInfo])
-async def user_info(user_id: str, _: TokenDict = Depends(get_current_admin)):
-    pool = await get_db_pool()
+async def user_info(
+        user_id: str,
+        _: TokenDict = Depends(get_current_admin),
+        pool = Depends(get_db_pool)
+):
     async with pool.connection() as conn:
         cur = await conn.execute(
             """
@@ -104,8 +118,11 @@ async def user_info(user_id: str, _: TokenDict = Depends(get_current_admin)):
 
 
 @user_router.post("", response_model=DataResult[UserInfo])
-async def add_user(user: UserAdd, _: TokenDict = Depends(get_current_admin)):
-    pool = await get_db_pool()
+async def add_user(
+        user: UserAdd,
+        _: TokenDict = Depends(get_current_admin),
+        pool = Depends(get_db_pool)
+):
     async with pool.connection() as conn:
         async with conn.transaction():
             cur = await conn.execute(
@@ -129,8 +146,12 @@ async def add_user(user: UserAdd, _: TokenDict = Depends(get_current_admin)):
 
 
 @user_router.put("/{user_id}", response_model=DataResult[UserInfo])
-async def update_user(user_id: str, user: UserUpdate, _: TokenDict = Depends(get_current_admin)):
-    pool = await get_db_pool()
+async def update_user(
+        user_id: str,
+        user: UserUpdate,
+        _: TokenDict = Depends(get_current_admin),
+        pool = Depends(get_db_pool)
+):
     async with pool.connection() as conn:
         async with conn.transaction():
             target_id = int(user_id)
@@ -168,11 +189,14 @@ async def update_user(user_id: str, user: UserUpdate, _: TokenDict = Depends(get
 
 
 @user_router.delete("", response_model=DataResult[List[str]])
-async def delete_user(req: UserDel, _: TokenDict = Depends(get_current_admin)):
+async def delete_user(
+        req: UserDel,
+        _: TokenDict = Depends(get_current_admin),
+        pool = Depends(get_db_pool)
+):
     if not req.ids:
         return DataResult(status=0, msg="No user IDs provided")
 
-    pool = await get_db_pool()
     async with pool.connection() as conn:
         async with conn.transaction():
             try:
@@ -200,8 +224,11 @@ async def delete_user(req: UserDel, _: TokenDict = Depends(get_current_admin)):
 
 
 @user_router.patch("/me/password", response_model=DataResult[str])
-async def change_my_password(info: UserPassword, user: TokenDict = Depends(get_current_user)):
-    pool = await get_db_pool()
+async def change_my_password(
+        info: UserPassword,
+        user: TokenDict = Depends(get_current_user),
+        pool = Depends(get_db_pool)
+):
     async with pool.connection() as conn:
         async with conn.transaction():
             cur = await conn.execute(
@@ -217,8 +244,12 @@ async def change_my_password(info: UserPassword, user: TokenDict = Depends(get_c
 
 
 @user_router.patch("/{user_id}/password", response_model=DataResult[str])
-async def admin_reset_password(user_id: str, info: UserPassword, _: TokenDict = Depends(get_current_admin)):
-    pool = await get_db_pool()
+async def admin_reset_password(
+        user_id: str,
+        info: UserPassword,
+        _: TokenDict = Depends(get_current_admin),
+        pool = Depends(get_db_pool)
+):
     async with pool.connection() as conn:
         async with conn.transaction():
             target_id = int(user_id)

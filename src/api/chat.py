@@ -7,25 +7,24 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import BaseMessage, HumanMessage, BaseMessageChunk, AIMessage
 
 from src.database.postgre import get_db_pool
-from src.schemas.auth import TokenDict
 from src.schemas.chat import ThreadItem, ChatReq, ChatMessage
 from src.schemas.page import NoPageResult
+from src.utils.auth import get_chat_entity
 from src.utils.chat import check_thread_access, GRAPH_LIST, get_graph_by_name
-from src.utils.jwt import get_chat_user
 
 
-chat_router = APIRouter(prefix="/chat", tags=["Chat"])
+chat_router = APIRouter(prefix="/chat", tags=["Chat"], dependencies=[Depends(get_chat_entity)])
 
 
 @chat_router.get("", response_model=List[str])
-async def get_graph(_: TokenDict = Depends(get_chat_user)):
+async def get_graph():
     return GRAPH_LIST
 
 
 @chat_router.get("/{graph}", response_model=NoPageResult[ThreadItem])
 async def get_all_threads(
         graph: str,
-        user_identifier: str = Depends(get_chat_user),
+        user_identifier: str = Depends(get_chat_entity),
         pool = Depends(get_db_pool)
 ):
     """
@@ -82,7 +81,7 @@ async def get_all_threads(
 async def send_message_stream(
         graph: str,
         req: ChatReq,
-        user_identifier: str = Depends(get_chat_user),
+        user_identifier: str = Depends(get_chat_entity),
         pool = Depends(get_db_pool)
 ):
     """
@@ -144,7 +143,7 @@ async def send_message_stream(
 async def get_chat_history(
         graph: str,
         thread_id: str,
-        user_identifier: str = Depends(get_chat_user),
+        user_identifier: str = Depends(get_chat_entity),
         pool = Depends(get_db_pool)
 ):
     """

@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends
 from src.database.postgre import get_db_pool
 from src.schemas.auth import UserRegister, UserLogin, UserRole, TokenDict
 from src.schemas.page import DataResult
-from src.utils.jwt import create_access_token, get_anon_identifier_from_cookie
+from src.utils.auth import get_anon_identifier
+from src.utils.jwt import create_access_token
 from src.utils.chat import merge_anonymous_threads_to_user
 from src.utils.security import pwd_context
 
@@ -14,7 +15,7 @@ auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 async def register(
         user: UserRegister,
         pool = Depends(get_db_pool),
-        anon_identifier: str | None = Depends(get_anon_identifier_from_cookie),
+        anon_identifier: str | None = Depends(get_anon_identifier),
 ):
     hash_pwd = pwd_context.hash(user.password)
     async with pool.connection() as conn:
@@ -44,7 +45,7 @@ async def register(
 async def login(
         user: UserLogin,
         pool = Depends(get_db_pool),
-        anon_identifier: str | None = Depends(get_anon_identifier_from_cookie),
+        anon_identifier: str | None = Depends(get_anon_identifier),
 ):
     async with pool.connection() as conn:
         async with conn.transaction():

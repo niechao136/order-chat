@@ -1,5 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel
+from typing import List
 
 
 class UserRole(str, Enum):
@@ -20,3 +21,9 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
+
+class ApiKeyEntry(BaseModel):
+    key_id: str
+    user_id: int
+    permissions: List[str]
+    rate_limit: int
