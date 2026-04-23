@@ -1,10 +1,17 @@
 from psycopg import AsyncConnection
+from typing import List
 
 from src.find_agent.graph import create_find_graph
 from src.order_agent.graph import create_order_graph
+from src.schemas.chat import GraphConfig
 
 
 GRAPH_LIST = ["find", "order"]
+
+GRAPH_CONFIG: List[GraphConfig] = [
+    GraphConfig(name="find", lang="zh-TW", collection_name="WayFind"),
+    GraphConfig(name="order", lang="zh-TW", collection_name="Order"),
+]
 
 
 async def get_graph_by_name(graph: str):

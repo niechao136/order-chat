@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as React from 'react';
+import { useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
 import * as z from 'zod';
@@ -64,6 +64,9 @@ export default function RegisterPage() {
 
   const { signUp, clearCache } = useAuthAction();
   const { data: graphs } = useGraph();
+  const graph_name = useMemo(() => {
+    return (graphs ?? []).map(o => o.name);
+  }, [graphs]);
 
   async function onSubmit(values: FormValues) {
     const req = {
@@ -78,12 +81,12 @@ export default function RegisterPage() {
 
         await clearCache();
 
-        if (!graphs?.[0]) {
+        if (!graph_name?.[0]) {
           toast.error('目前没有可用的 Graph');
           return;
         }
 
-        const def = graphs?.includes(graph ?? '') ? graph : graphs?.[0];
+        const def = graph_name?.includes(graph ?? '') ? graph : graph_name?.[0];
         localStorage.removeItem('login_redirect_graph');
 
         router.push(`/chat/${def}`);

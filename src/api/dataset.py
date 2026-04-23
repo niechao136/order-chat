@@ -18,15 +18,16 @@ from src.dataset.embedding import get_embedding_async, get_embeddings_async_batc
 from src.dataset.qdrant import get_qdrant_client_async
 from src.schemas.dataset import CollectionAdd, ItemSearch, ItemAdd, ItemUpdate, ItemDelete, FieldItem, ItemBatch
 from src.schemas.page import NoPageResult, DataResult, PageResult, PageParams
-from src.utils.auth import get_admin_entity
+from src.utils.auth import get_admin_entity, get_chat_entity
 from src.utils.dataset import validate_and_fill_metadata, build_qdrant_filter, get_qdrant_index_params
 from src.utils.uuid import generate_timestamp_uuid
 
-dataset_router = APIRouter(prefix="/dataset", tags=["Dataset"], dependencies=[Depends(get_admin_entity)])
+dataset_router = APIRouter(prefix="/dataset", tags=["Dataset"])
 
 
 @dataset_router.get("", response_model=NoPageResult[CollectionDescription])
 async def collection_list(
+        _=Depends(get_chat_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     rows = await client.get_collections()
@@ -37,6 +38,7 @@ async def collection_list(
 @dataset_router.post("", response_model=DataResult[CollectionInfo])
 async def add_collection(
         req: CollectionAdd,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(req.name)
@@ -57,6 +59,7 @@ async def add_collection(
 @dataset_router.get("/{name}", response_model=DataResult[CollectionInfo])
 async def collection_info(
         name: str,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -70,6 +73,7 @@ async def collection_info(
 @dataset_router.delete("/{name}", response_model=DataResult[str])
 async def delete_collection(
         name: str,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -87,6 +91,7 @@ async def delete_collection(
 async def item_list(
         name: str,
         params: PageParams = Depends(),
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -134,6 +139,7 @@ async def item_list(
 @dataset_router.get("/{name}/count", response_model=DataResult[int])
 async def item_count(
         name: str,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -149,6 +155,7 @@ async def item_count(
 async def add_item(
         name: str,
         req: ItemAdd,
+        _=Depends(get_admin_entity),
         db_pool=Depends(get_db_pool),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
@@ -178,6 +185,7 @@ async def add_item(
 @dataset_router.get("/{name}/all", response_model=NoPageResult[Record])
 async def get_all_items(
         name: str,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -209,6 +217,7 @@ async def get_all_items(
 async def batch_get_items(
         name: str,
         req: ItemBatch,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -235,6 +244,7 @@ async def batch_get_items(
 async def upload_item(
         name: str,
         req: List[ItemAdd],
+        _=Depends(get_admin_entity),
         db_pool=Depends(get_db_pool),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
@@ -280,6 +290,7 @@ async def update_item(
         name: str,
         item_id: str,
         req: ItemUpdate,
+        _=Depends(get_admin_entity),
         db_pool=Depends(get_db_pool),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
@@ -314,6 +325,7 @@ async def update_item(
 async def get_item(
         name: str,
         item_id: str,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -332,6 +344,7 @@ async def get_item(
 async def delete_item(
         name: str,
         req: ItemDelete,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -345,6 +358,7 @@ async def delete_item(
 @dataset_router.delete("/{name}/clear", response_model=DataResult[str])
 async def clear_items(
         name: str,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -362,6 +376,7 @@ async def clear_items(
 async def search_item(
         name: str,
         req: ItemSearch,
+        _=Depends(get_admin_entity),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
     exist = await client.collection_exists(name)
@@ -385,6 +400,7 @@ async def search_item(
 @dataset_router.get("/{name}/fields", response_model=DataResult[List[FieldItem]])
 async def list_fields(
         name: str,
+        _=Depends(get_admin_entity),
         db_pool = Depends(get_db_pool),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):
@@ -421,6 +437,7 @@ async def list_fields(
 async def replace_fields(
         name: str,
         req: List[FieldItem],
+        _=Depends(get_admin_entity),
         db_pool = Depends(get_db_pool),
         client: AsyncQdrantClient = Depends(get_qdrant_client_async)
 ):

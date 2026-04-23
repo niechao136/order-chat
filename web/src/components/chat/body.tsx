@@ -24,8 +24,12 @@ export function ChatBody({ children }: {
   const thread_id = params.thread_id as string;
 
   const { data: graphs } = useGraph();
+  const graph_name = useMemo(() => {
+    return (graphs ?? []).map(o => o.name);
+  }, [graphs]);
+
   const { data: owner } = useOwner();
-  const { data: threads } = useThreads(graph ?? '', graphs ?? []);
+  const { data: threads } = useThreads(graph ?? '', graph_name ?? []);
   const title = useMemo(() => {
     const def_title = '欢迎提问';
     if (!thread_id || !threads) return def_title;
@@ -38,7 +42,7 @@ export function ChatBody({ children }: {
   return (
     <SidebarProvider>
       <ChatSidebar
-        graphs={graphs ?? []}
+        graphs={graph_name ?? []}
         owner={owner ?? null}
         threads={threads ?? []}
       />

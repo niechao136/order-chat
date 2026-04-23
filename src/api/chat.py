@@ -7,18 +7,18 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import BaseMessage, HumanMessage, BaseMessageChunk, AIMessage
 
 from src.database.postgre import get_db_pool
-from src.schemas.chat import ThreadItem, ChatReq, ChatMessage
+from src.schemas.chat import ThreadItem, ChatReq, ChatMessage, GraphConfig
 from src.schemas.page import NoPageResult
 from src.utils.auth import get_chat_entity
-from src.utils.chat import check_thread_access, GRAPH_LIST, get_graph_by_name
+from src.utils.chat import check_thread_access, GRAPH_CONFIG, get_graph_by_name
 
 
 chat_router = APIRouter(prefix="/chat", tags=["Chat"], dependencies=[Depends(get_chat_entity)])
 
 
-@chat_router.get("", response_model=List[str])
+@chat_router.get("", response_model=List[GraphConfig])
 async def get_graph():
-    return GRAPH_LIST
+    return GRAPH_CONFIG
 
 
 @chat_router.get("/{graph}", response_model=NoPageResult[ThreadItem])
@@ -106,7 +106,13 @@ async def send_message_stream(
             if not await check_thread_access(thread_id, user_identifier, conn):
                 raise HTTPException(status_code=403, detail="Access denied")
 
-    config = {"configurable": {"thread_id": thread_id}}
+    config = {
+        "configurable": {
+            "thread_id": thread_id,
+            "collection_name": req.collection_name,
+            "lang": req.lang,
+        }
+    }
 
     async def event_generator():
         # 首先告知前端最终的 thread_id（如果是新建的，前端需要保存）

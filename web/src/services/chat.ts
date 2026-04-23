@@ -1,13 +1,13 @@
 import { apiRequest, getToken, getBaseUrl } from '@/services/api';
 import { PageResult } from '@/types/api';
-import { ChatThread, ChatMessage } from '@/types/chat';
+import { ChatThread, ChatMessage, ChatReq, GraphConfig } from '@/types/chat';
 
 
 export async function getGraphList()  {
   const res = await apiRequest('chat', {
     requireAuth: false,
   });
-  const data: string[] = await res.json();
+  const data: GraphConfig[] = await res.json();
   return data;
 }
 
@@ -31,9 +31,7 @@ export async function getChatHistory(graph: string, thread_id: string) {
 
 
 export async function sendMessage(
-  graph: string,
-  thread_id: string | null,
-  message: string,
+  req: ChatReq,
   onChunk: (content: string, node?: string) => void, // 收到碎片时的回调
   onDone?: () => void, // 结束时的回调
   onThreadCreated?: (thread_id: string) => void // 新建会话时回调
@@ -42,6 +40,8 @@ export async function sendMessage(
   const token = await getToken();
   const baseUrl = getBaseUrl();
 
+  const { graph, ...body } = req;
+
   const response = await fetch(`${baseUrl}/chat/${graph}/stream`, {
     method: 'POST',
     headers: {
@@ -49,10 +49,7 @@ export async function sendMessage(
       'Authorization': `Bearer ${token}`,
     },
     credentials: 'include',   // 携带 Cookie（匿名用户标识）
-    body: JSON.stringify({
-      message,
-      thread_id: thread_id || null,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) throw new Error('网络请求失败');

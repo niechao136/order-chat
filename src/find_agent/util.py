@@ -14,6 +14,7 @@ def format_product(content: str) -> ProductItem:
         id=data.get("product_id", ""),
         name=data.get("name", ""),
         price=float(data.get("price", 0)),
+        descr=data.get("description", ""),
         store=data.get("store_name", ""),
         time=data.get("store_time", ""),
         space_id=data.get("space_id", ""),

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getChatHistory, getGraphList, getThreadList, sendMessage } from '@/services/chat';
-import { ChatMessage, ChatThread } from '@/types/chat';
+import { ChatMessage, ChatThread, ChatReq } from '@/types/chat';
 
 
 export const chatKeys = {
@@ -50,14 +50,14 @@ export function useChatAction(graph: string = '') {
   const queryClient = useQueryClient();
 
   const sendMsg = useMutation({
-    mutationFn: ({ thread_id, content, onChunk, onFinished, onThreadCreated }: {
-      thread_id: string | null;
-      content: string;
+    mutationFn: ({ req, onChunk, onFinished, onThreadCreated }: {
+      req: ChatReq;
       onChunk: (content: string, node?: string) => void;
       onFinished?: () => void;
       onError?: () => void;
       onThreadCreated?: (thread_id: string) => void;
     }) => {
+      const { thread_id } = req;
       let finalThreadId = thread_id;
 
       const onDone = async () => {
@@ -78,9 +78,10 @@ export function useChatAction(graph: string = '') {
         onThreadCreated?.(newThreadId);
       };
 
-      return sendMessage(graph, thread_id, content, onChunk, onDone, handleThreadCreated);
+      return sendMessage(req, onChunk, onDone, handleThreadCreated);
     },
-    onMutate: async ({ thread_id, content }) => {
+    onMutate: async ({ req }) => {
+      const { thread_id, message } = req;
       const optimisticThreadId = thread_id || `temp_${Date.now()}`;
 
       // 乐观更新侧边栏
@@ -101,7 +102,7 @@ export function useChatAction(graph: string = '') {
         // 新对话逻辑，加入临时对话
         const optimisticThread: ChatThread = {
           thread_id: optimisticThreadId,
-          summary: content, // 标题为首条消息
+          summary: message, // 标题为首条消息
           last_id: new Date().toISOString()
         };
         return [ optimisticThread, ...oldList ];
@@ -116,7 +117,7 @@ export function useChatAction(graph: string = '') {
         const userMsg: ChatMessage = {
           id: chatKeys.temp_user,
           role: 'user',
-          content: content
+          content: message
         };
         const aiMsg: ChatMessage = {
           id: chatKeys.temp_ai,
@@ -139,8 +140,8 @@ export function useChatAction(graph: string = '') {
       }
 
       // 2. 回滚历史记录
-      if (context?.previousHistory && variables.thread_id) {
-        queryClient.setQueryData(chatKeys.history(graph, variables.thread_id), context.previousHistory);
+      if (context?.previousHistory && variables.req.thread_id) {
+        queryClient.setQueryData(chatKeys.history(graph, variables.req.thread_id), context.previousHistory);
       }
 
       // 3. 执行回调

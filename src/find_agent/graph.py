@@ -31,11 +31,13 @@ async def call_model(state: AgentState, config: RunnableConfig):
 
     if response.tool_calls:
         return {"messages": [response]}
-    return {"messages": []}
+    return {}
 
 
 async def format_node(state: AgentState, config: RunnableConfig):
-    sys_msg = SystemMessage(content=SYSTEM_PROMPT)
+    configurable = config.get("configurable", {})
+    lang = configurable.get("lang", "zh-TW")
+    sys_msg = SystemMessage(content=SYSTEM_PROMPT.replace("[LANG]", lang))
     response = await llm_with_format.ainvoke([sys_msg] + state.messages, config)
     content = response.model_dump_json()
     return {"messages": [AIMessage(content=content)]}

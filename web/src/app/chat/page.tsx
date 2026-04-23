@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 import { useGraph } from '@/hooks/use-chat';
@@ -11,22 +11,25 @@ export default function ChatIndexPage() {
   const router = useRouter();
 
   const { data: graphs } = useGraph();
+  const graph_name = useMemo(() => {
+    return (graphs ?? []).map(o => o.name);
+  }, [graphs]);
 
   useEffect(() => {
     // 确保数据已加载
-    if (!graphs || !Array.isArray(graphs) || graphs.length === 0) return;
+    if (graph_name.length === 0) return;
 
     // 情况 A：用户直接访问 /chat (没有 graph 参数)
     if (!graph) {
-      router.replace(`/chat/${graphs[0]}`);
+      router.replace(`/chat/${graph_name[0]}`);
       return;
     }
 
     // 情况 B：用户访问了不存在的 graph，例如 /chat/wrong_name
-    if (!graphs.includes(graph)) {
-      router.replace(`/chat/${graphs[0]}`);
+    if (!graph_name.includes(graph)) {
+      router.replace(`/chat/${graph_name[0]}`);
     }
-  }, [ graph, graphs, router ]);
+  }, [ graph, graph_name, router ]);
 
   return (
     <div className="flex items-center justify-center h-screen text-slate-400">
