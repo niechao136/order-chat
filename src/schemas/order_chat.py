@@ -12,7 +12,7 @@ class OptionItem(BaseModel):
     index: int = Field(description="规格分类编号")
 
 
-class ProductItem(BaseModel):
+class OrderProduct(BaseModel):
     id: str = Field(description="商品ID")
     name: str = Field(description="商品名称")
     price: float = Field(description="商品基础价格，不包括规格部分的加价")
@@ -27,7 +27,7 @@ class IntentSchema(BaseModel):
 
 class OperatorItem(BaseModel):
     action: Literal["add", "delete"] = Field(description="操作类型，仅包括新增和删除两种")
-    product: ProductItem = Field(description="操作涉及的商品")
+    product: OrderProduct = Field(description="操作涉及的商品")
 
 
 class OperatorSchema(BaseModel):
@@ -49,5 +49,5 @@ class OutputSchema(BaseModel):
 
 class AgentState(BaseModel):
     messages: Annotated[List[BaseMessage], add_messages]
-    cart: List[ProductItem] = Field(default_factory=list)
+    cart: List[dict] = Field(default_factory=list)
     intent: Literal["chat", "cancel", "checkout", "query", "cart"] = None

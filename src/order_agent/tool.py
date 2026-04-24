@@ -5,7 +5,7 @@ from langchain_core.tools import tool
 
 from src.dataset.embedding import get_embedding_async
 from src.dataset.qdrant import get_qdrant_client, init_qdrant
-from src.schemas.order_chat import ProductItem
+from src.schemas.order_chat import OrderProduct
 
 from .util import format_product
 
@@ -15,7 +15,7 @@ async def search_product(
     query: str,
     top_k: int,
     config: RunnableConfig = None
-) -> List[ProductItem]:
+) -> List[OrderProduct]:
     """
     当你认为当前信息不足以回答用户，需要搜索商品信息时，调用此工具。
 

@@ -54,7 +54,7 @@ class OutputProduct(BaseModel):
     id: str = Field(description="商品ID")
     name: str = Field(description="商品名称")
     price: float = Field(description="商品价格")
-    descr: float = Field(description="商品描述")
+    descr: str = Field(description="商品描述")
     ai_analysis: str = Field(description="商品AI分析")
     index: ProductIndex = Field(description="商品序号，从A开始，严禁重复")
 
@@ -68,4 +68,4 @@ class OutputStore(BaseModel):
 
 class OutputSchema(BaseModel):
     AI_reply: str = Field(description="对于用户问题的自然语音回复，要求简洁明了")
-    info: List[OutputProduct] = Field(description="回复中提及的商品信息，必须从 search_product 返回结果中提取，严重修改或者编造")
+    info: List[OutputStore] = Field(description="回复中提及的商品信息，必须从 search_product 返回结果中提取，严重修改或者编造")

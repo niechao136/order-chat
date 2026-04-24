@@ -54,27 +54,29 @@ async def cart_node(state: AgentState, config: RunnableConfig):
     """
     订单节点：负责阅读历史并决定是否需要操作订单
     """
-    cart_text =  json.dumps([item.model_dump() for item in state.cart], ensure_ascii=False)
+    cart_text =  json.dumps(state.cart, ensure_ascii=False)
     sys_content = CART_PROMPT + f"\n\n【当前购物车状态】\n{cart_text}"
     sys_msg = SystemMessage(content=sys_content)
-    response = await llm_with_cart.ainvoke([sys_msg] + state.messages, config)
-    res = cast(OperatorSchema, response)
+    response: OperatorSchema = await llm_with_cart.ainvoke([sys_msg] + state.messages, config)
 
-    new_cart = update_cart(state.cart, res)
+    new_cart = update_cart(state.cart, response)
 
     return {"cart": new_cart}
 
 
 async def format_node(state: AgentState, config: RunnableConfig):
-    cart_text = json.dumps([item.model_dump() for item in state.cart], ensure_ascii=False)
+    cart_text = json.dumps(state.cart, ensure_ascii=False)
     sys_content = FORMAT_PROMPT + f"\n\n【当前购物车状态】\n{cart_text}"
     sys_msg = SystemMessage(content=sys_content)
-    response = await llm_with_format.ainvoke([sys_msg] + state.messages, config)
+    response: OutputSchema = await llm_with_format.ainvoke([sys_msg] + state.messages, config)
     content = response.model_dump_json()
     cart = state.cart
     if response.is_finish:
         cart = []
-    return {"messages": [AIMessage(content=content)], "cart": cart}
+    return {
+        "messages": [AIMessage(content=content)],
+        "cart": cart
+    }
 
 
 tool_node = ToolNode(tools=search_tools)

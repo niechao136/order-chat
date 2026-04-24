@@ -2,10 +2,10 @@ import re
 from collections import defaultdict
 from typing import List
 
-from src.schemas.order_chat import ProductItem, OptionItem, OperatorSchema
+from src.schemas.order_chat import OrderProduct, OptionItem, OperatorSchema
 
 
-def format_product(content: str) -> ProductItem:
+def format_product(content: str) -> OrderProduct:
     lines = content.strip().split('\n')
     data = {}
 
@@ -70,7 +70,7 @@ def format_product(content: str) -> ProductItem:
             options.append(option_item)
 
     # 4. 构建 ProductItem（quantity 未提供，默认为 1；selected 初始为空列表）
-    product = ProductItem(
+    product = OrderProduct(
         id=prod_id,
         name=prod_name,
         price=price,
@@ -148,8 +148,8 @@ def selected_contains(item_selected: List[OptionItem], target_selected: List[Opt
     return target_ids.issubset(item_ids)
 
 
-def update_cart(old_cart: List[ProductItem], ops: OperatorSchema) -> List[ProductItem]:
-    new_cart = [item.model_copy(deep=True) for item in old_cart]  # 深拷贝避免副作用
+def update_cart(old_cart: List[dict], ops: OperatorSchema) -> List[dict]:
+    new_cart = [OrderProduct(**item) for item in old_cart]
 
     for change_item in ops.ops:
         action = change_item.action
@@ -213,4 +213,4 @@ def update_cart(old_cart: List[ProductItem], ops: OperatorSchema) -> List[Produc
             # 移除标记为 None 的条目
             new_cart = [item for item in new_cart if item is not None]
 
-    return new_cart
+    return [item.model_dump() for item in new_cart]

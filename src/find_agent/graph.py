@@ -38,9 +38,11 @@ async def format_node(state: AgentState, config: RunnableConfig):
     configurable = config.get("configurable", {})
     lang = configurable.get("lang", "zh-TW")
     sys_msg = SystemMessage(content=SYSTEM_PROMPT.replace("[LANG]", lang))
-    response = await llm_with_format.ainvoke([sys_msg] + state.messages, config)
+    response: OutputSchema = await llm_with_format.ainvoke([sys_msg] + state.messages, config)
     content = response.model_dump_json()
-    return {"messages": [AIMessage(content=content)]}
+    return {
+        "messages": [AIMessage(content=content)]
+    }
 
 
 
