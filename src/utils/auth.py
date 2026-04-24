@@ -1,4 +1,3 @@
-import ipaddress
 import uuid
 from fastapi import Request, Response, HTTPException, Depends, Header, status
 from pydantic import ValidationError
@@ -12,10 +11,9 @@ from src.utils.jwt import verify_access_token
 
 ALLOW_ROLE: List[UserRole] = [UserRole.ADMIN]
 ANON_COOKIE_NAME = "chat_anon_id"
-ALLOWED_NETWORKS = [
-    ipaddress.ip_network("127.0.0.0/8"),
-    ipaddress.ip_network("::1/128"),
-    ipaddress.ip_network("150.109.15.0/24"),  # 允许整个网段
+ALLOWED_ORIGIN = [
+    "http://150.109.15.178:10092",
+    "http://localhost:3000"
 ]
 
 
@@ -119,18 +117,9 @@ async def get_chat_entity(
     except HTTPException:
         pass
 
-    forwarded = request.headers.get("x-forwarded-for")
-    real_ip_str = forwarded.split(",")[0].strip() if forwarded else request.client.host
+    origin = request.headers.get("origin") or request.headers.get("referer")
 
-    try:
-        ip = ipaddress.ip_address(real_ip_str)
-        print(f"Current Client IP: {ip}")
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid IP format")
-
-    if not any(ip in net for net in ALLOWED_NETWORKS):
+    if not any(origin and origin.startswith(net) for net in ALLOWED_ORIGIN):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Need token or API key"
