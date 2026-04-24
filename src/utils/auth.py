@@ -113,7 +113,7 @@ async def get_chat_entity(
     # 2. 尝试 API Key
     try:
         key_info = await get_api_key(request, pool)
-        return f"user_{key_info.user_id}"
+        return f"api_key_{key_info.key_id}"
     except HTTPException:
         pass
 

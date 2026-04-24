@@ -1,5 +1,6 @@
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 
+import { apiKeys } from '@/hooks/use-api-key';
 import { chatKeys } from '@/hooks/use-chat';
 import { datasetKeys } from '@/hooks/use-dataset';
 import { userKeys } from '@/hooks/use-user';
@@ -9,6 +10,10 @@ export function useAuthAction() {
   const queryClient = useQueryClient();
 
   const clearCache = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: apiKeys.all,
+      exact: false
+    });
     await queryClient.invalidateQueries({
       queryKey: chatKeys.all,
       exact: false

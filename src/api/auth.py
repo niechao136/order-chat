@@ -5,7 +5,7 @@ from src.schemas.auth import UserRegister, UserLogin, UserRole, TokenDict
 from src.schemas.page import DataResult
 from src.utils.auth import get_anon_identifier
 from src.utils.jwt import create_access_token
-from src.utils.chat import merge_anonymous_threads_to_user
+from src.utils.chat import merge_anonymous_conversations_to_user
 from src.utils.security import pwd_context
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -35,7 +35,7 @@ async def register(
             user_id = str(row["id"])
             user_identifier = f"user_{user_id}"
             if anon_identifier:
-                await merge_anonymous_threads_to_user(conn, user_identifier, anon_identifier)
+                await merge_anonymous_conversations_to_user(conn, user_identifier, anon_identifier)
 
             token = create_access_token(TokenDict(id=user_id, name=user.username, role=user.role))
             return DataResult(status=1, data=token)
@@ -60,7 +60,7 @@ async def login(
             user_id = str(row["id"])
             user_identifier = f"user_{user_id}"
             if anon_identifier:
-                await merge_anonymous_threads_to_user(conn, user_identifier, anon_identifier)
+                await merge_anonymous_conversations_to_user(conn, user_identifier, anon_identifier)
 
             role = UserRole(row["role"])
             token = create_access_token(TokenDict(id=user_id, name=user.username, role=role))

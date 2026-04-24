@@ -1,9 +1,16 @@
 import json
 from fastapi import HTTPException
 from typing import Any, Dict, List, Optional
+from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny, Range, MatchText, PayloadSchemaType
 
 from src.schemas.dataset import FilterCondition
+
+
+async def check_dataset(client: AsyncQdrantClient, name: str):
+    exist = await client.collection_exists(name)
+    if not exist:
+        raise HTTPException(status_code=400, detail=f"知识库 {name} 不存在")
 
 
 def check_field_type(value: Any, expected_type: str) -> bool:
