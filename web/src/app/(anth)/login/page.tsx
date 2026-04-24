@@ -60,6 +60,7 @@ export default function LoginPage() {
         }
 
         const def = graph_name?.includes(graph ?? '') ? graph : graph_name?.[0];
+        console.log(graph, def);
         localStorage.removeItem('login_redirect_graph');
 
         router.push(`/chat/${def}`);
