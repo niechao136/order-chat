@@ -40,7 +40,7 @@ export function useHistory(graph: string, thread_id: string) {
     queryKey: chatKeys.history(graph, thread_id),
     queryFn: () => getChatHistory(graph, thread_id).then(res => res.data),
     // 只有当两个参数都存在时才允许执行
-    enabled: !!graph && !!thread_id && !thread_id.startsWith('temp_'),
+    enabled: !!graph && !!thread_id,
     // 可选：如果希望进入页面时数据是最新的，可以设置
     staleTime: 1000 * 30 // 30秒内认为数据是新鲜的
   });
@@ -82,7 +82,7 @@ export function useChatAction(graph: string = '') {
     },
     onMutate: async ({ req }) => {
       const { thread_id, message } = req;
-      const optimisticThreadId = thread_id || `temp_${Date.now()}`;
+      const optimisticThreadId = thread_id || '';
 
       // 乐观更新侧边栏
       await queryClient.cancelQueries({ queryKey: chatKeys.thread(graph) });
@@ -108,26 +108,23 @@ export function useChatAction(graph: string = '') {
         return [ optimisticThread, ...oldList ];
       });
 
-      // 历史记录乐观更新（仅当 thread_id 已知）
-      let previousHistory: ChatMessage[] | undefined;
-      if (thread_id) {
-        await queryClient.cancelQueries({ queryKey: chatKeys.history(graph, thread_id) });
-        previousHistory = queryClient.getQueryData<ChatMessage[]>(chatKeys.history(graph, thread_id));
+      // 历史记录乐观更新
+      await queryClient.cancelQueries({ queryKey: chatKeys.history(graph, optimisticThreadId) });
+      const previousHistory = queryClient.getQueryData<ChatMessage[]>(chatKeys.history(graph, optimisticThreadId));
 
-        const userMsg: ChatMessage = {
-          id: chatKeys.temp_user,
-          role: 'user',
-          content: message
-        };
-        const aiMsg: ChatMessage = {
-          id: chatKeys.temp_ai,
-          role: 'assistant',
-          content: '' // 初始为空，由 onChunk 更新
-        };
-        queryClient.setQueryData<ChatMessage[]>(chatKeys.history(graph, thread_id), (old) => {
-          return [ ...(old ?? []), userMsg, aiMsg ];
-        });
-      }
+      const userMsg: ChatMessage = {
+        id: chatKeys.temp_user,
+        role: 'user',
+        content: message
+      };
+      const aiMsg: ChatMessage = {
+        id: chatKeys.temp_ai,
+        role: 'assistant',
+        content: '' // 初始为空，由 onChunk 更新
+      };
+      queryClient.setQueryData<ChatMessage[]>(chatKeys.history(graph, optimisticThreadId), (old) => {
+        return [ ...(old ?? []), userMsg, aiMsg ];
+      });
       return { previousThreads, previousHistory, optimisticThreadId };
     },
     onError: (error, variables, context) => {

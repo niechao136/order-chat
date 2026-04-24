@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, ReactNode } from 'react';
+import { useEffect, useMemo, ReactNode } from 'react';
 
 import { useParams } from 'next/navigation';
 
@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { useGraph, useThreads } from '@/hooks/use-chat';
 import { useOwner } from '@/hooks/use-user';
+import { useChatStore } from '@/stores/chat';
 
 export function ChatBody({ children }: {
   children: ReactNode;
@@ -22,6 +23,11 @@ export function ChatBody({ children }: {
   const params = useParams();
   const graph = params.graph as string;
   const thread_id = params.thread_id as string;
+
+  const setThreadId = useChatStore((s) => s.setThreadId);
+  useEffect(() => {
+    setThreadId(thread_id ?? null);
+  }, [thread_id, setThreadId]);
 
   const { data: graphs } = useGraph();
   const graph_name = useMemo(() => {

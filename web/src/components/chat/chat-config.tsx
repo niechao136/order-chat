@@ -73,7 +73,7 @@ export function ChatConfig({ collection_name, collections, disabled, lang, setCo
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                className="h-8 w-8 text-muted-foreground hover:text-primary">
           <SettingsIcon className="h-4 w-4"/>
         </Button>
       </DialogTrigger>
