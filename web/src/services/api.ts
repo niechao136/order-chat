@@ -1,19 +1,5 @@
 import { ApiRequestOptions } from '@/types/api';
-import { getCookie, removeCookie, TOKEN_COOKIE } from '@/utils/cookie';
-
-
-export async function getToken() {
-
-  if (typeof window === 'undefined') {
-    // 服务端环境
-    const { cookies } = await import('next/headers');
-    const cookieStore = await cookies();
-    return cookieStore.get(TOKEN_COOKIE)?.value ?? '';
-  }
-
-  // 客户端环境
-  return getCookie(TOKEN_COOKIE) ?? '';
-}
+import { getToken, clearToken } from '@/utils/cookie';
 
 
 export function getBaseUrl() {
@@ -63,7 +49,7 @@ export async function apiRequest(url: string, options: ApiRequestOptions = {}) {
 }
 
 export function handleLogout() {
-  removeCookie(TOKEN_COOKIE);
+  clearToken();
   // 使用 window.location 强制跳转，确保清理所有内存状态（如 Context/Zustand）
   window.location.href = '/login';
 }

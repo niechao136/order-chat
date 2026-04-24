@@ -15,7 +15,8 @@ import { Field, FieldLabel, FieldGroup, FieldSet, FieldError } from '@/component
 import { Input } from '@/components/ui/input';
 import { useAuthAction } from '@/hooks/use-auth';
 import { useGraph } from '@/hooks/use-chat';
-import { setCookie, TOKEN_COOKIE } from '@/utils/cookie';
+import { saveToken } from '@/utils/cookie';
+import { checkGraph } from '@/utils/local';
 
 
 const formSchema = z.object({
@@ -49,10 +50,6 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const graph = typeof window !== 'undefined'
-  ? localStorage.getItem('login_redirect_graph') || null
-  : null;
-
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -77,7 +74,7 @@ export default function RegisterPage() {
     const body = JSON.stringify(req);
     signUp.mutate(body, {
       onSuccess: async (res) => {
-        setCookie(TOKEN_COOKIE, res?.data ?? '', { expires: 1, path: '/' });
+        saveToken(res?.data ?? '');
 
         await clearCache();
 
@@ -86,10 +83,9 @@ export default function RegisterPage() {
           return;
         }
 
-        const def = graph_name?.includes(graph ?? '') ? graph : graph_name?.[0];
-        localStorage.removeItem('login_redirect_graph');
+        const graph = checkGraph(graph_name);
 
-        router.push(`/chat/${def}`);
+        router.push(`/chat/${graph}`);
       },
       onError: (err) => {
         toast.error(err?.message || '注册失败');

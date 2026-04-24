@@ -16,7 +16,8 @@ import { Input } from '@/components/ui/input';
 
 import { useAuthAction } from '@/hooks/use-auth';
 import { useGraph } from '@/hooks/use-chat';
-import { setCookie, TOKEN_COOKIE } from '@/utils/cookie';
+import { saveToken } from '@/utils/cookie';
+import { checkGraph } from '@/utils/local';
 
 
 // 定义表单校验规则
@@ -26,10 +27,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-const graph = typeof window !== 'undefined'
-  ? localStorage.getItem('login_redirect_graph') || null
-  : null;
 
 
 export default function LoginPage() {
@@ -50,7 +47,7 @@ export default function LoginPage() {
     const body = JSON.stringify(values);
     signIn.mutate(body, {
       onSuccess: async (res) => {
-        setCookie(TOKEN_COOKIE, res?.data ?? '', { expires: 1, path: '/' });
+        saveToken(res?.data ?? '');
 
         await clearCache();
 
@@ -59,11 +56,9 @@ export default function LoginPage() {
           return;
         }
 
-        const def = graph_name?.includes(graph ?? '') ? graph : graph_name?.[0];
-        console.log(graph, def);
-        localStorage.removeItem('login_redirect_graph');
+        const graph = checkGraph(graph_name);
 
-        router.push(`/chat/${def}`);
+        router.push(`/chat/${graph}`);
       },
       onError: (err) => {
         toast.error(err?.message || '登录失败，请检查账号密码');

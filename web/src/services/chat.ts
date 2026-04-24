@@ -1,6 +1,7 @@
-import { apiRequest, getToken, getBaseUrl } from '@/services/api';
+import { apiRequest, getBaseUrl } from '@/services/api';
 import { PageResult } from '@/types/api';
 import { ChatThread, ChatMessage, ChatReq, GraphConfig } from '@/types/chat';
+import { getToken } from '@/utils/cookie';
 
 
 export async function getGraphList()  {

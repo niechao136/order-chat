@@ -37,7 +37,8 @@ import { ChangePassword } from '@/components/base/change-pwd';
 import { useAuthAction } from '@/hooks/use-auth';
 import { handleLogout } from '@/services/api';
 import { UserInfo } from '@/types/user';
-import { removeCookie, TOKEN_COOKIE } from '@/utils/cookie';
+import { clearToken } from '@/utils/cookie';
+import { saveGraph } from '@/utils/local';
 import { getInitials } from '@/utils/string';
 
 
@@ -65,7 +66,7 @@ export function NavUser({ mode, owner }: {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton asChild size="lg">
-            <Link href={`/login`} onClick={() => localStorage.setItem('login_redirect_graph', graph)}>
+            <Link href={`/login`} onClick={() => saveGraph(graph)}>
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarFallback className="rounded-lg">访</AvatarFallback>
               </Avatar>
@@ -86,7 +87,7 @@ export function NavUser({ mode, owner }: {
       handleLogout();
       return;
     }
-    removeCookie(TOKEN_COOKIE);
+    clearToken();
     await clearCache();
     router.replace(`/chat/${graph}`);
   };
