@@ -32,7 +32,7 @@ async def search_product(
     """
     print(f"调用 search_product 工具, query: {query}, top_k: {top_k}, min_price: {min_price}, max_price: {max_price}")
 
-    configurable = config.get("configurable", {})
+    configurable = config.get("configurable", {}) if config else {}
     collection_name = configurable.get("collection_name", "WayFind")
 
     # top_k 边界处理
@@ -67,7 +67,7 @@ async def search_product(
         with_payload=True,
         query_filter=filter_obj
     )
-    return [format_product(o.payload.get("content", "")) for o in rows.points]
+    return [format_product(o.payload.get("content", "") if o.payload else "") for o in rows.points]
 
 
 @tool

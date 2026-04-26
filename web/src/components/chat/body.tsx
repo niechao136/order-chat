@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { useGraph, useThreads } from '@/hooks/use-chat';
+import { useAgent, useConversations } from '@/hooks/use-chat';
 import { useOwner } from '@/hooks/use-user';
 import { useChatStore } from '@/stores/chat';
 
@@ -21,36 +21,37 @@ export function ChatBody({ children }: {
   children: ReactNode;
 }) {
   const params = useParams();
-  const graph = params.graph as string;
-  const thread_id = params.thread_id as string;
+  const agent = params.agent as string;
+  const conversation_id = params.conversation_id as string;
 
-  const setThreadId = useChatStore((s) => s.setThreadId);
+  const setConversationId = useChatStore((s) => s.setConversationId);
+
   useEffect(() => {
-    setThreadId(thread_id ?? null);
-  }, [thread_id, setThreadId]);
+    setConversationId(conversation_id ?? null);
+  }, [conversation_id, setConversationId]);
 
-  const { data: graphs } = useGraph();
-  const graph_name = useMemo(() => {
-    return (graphs ?? []).map(o => o.name);
-  }, [graphs]);
+  const { data: agents } = useAgent();
+  const agent_name = useMemo(() => {
+    return (agents ?? []).map(o => o.name);
+  }, [agents]);
 
   const { data: owner } = useOwner();
-  const { data: threads } = useThreads(graph ?? '', graph_name ?? []);
+  const { data: conversations } = useConversations(agent ?? '', agent_name ?? []);
   const title = useMemo(() => {
     const def_title = '欢迎提问';
-    if (!thread_id || !threads) return def_title;
+    if (!conversation_id || !conversations) return def_title;
 
-    // 从已有的 threads 缓存中查找匹配项
-    const currentThread = threads.find(o => o.thread_id === thread_id);
-    return currentThread?.summary ?? def_title;
-  }, [threads, thread_id]);
+    // 从已有的 conversations 缓存中查找匹配项
+    const currentConversation = conversations.find(o => o.conversation_id === conversation_id);
+    return currentConversation?.summary ?? def_title;
+  }, [conversations, conversation_id]);
 
   return (
     <SidebarProvider>
       <ChatSidebar
-        graphs={graph_name ?? []}
+        agents={agent_name ?? []}
         owner={owner ?? null}
-        threads={threads ?? []}
+        conversations={conversations ?? []}
       />
       <SidebarInset className="flex flex-col h-screen overflow-hidden">
         <header

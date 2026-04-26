@@ -34,10 +34,10 @@ import { UploadItem } from '@/components/dataset/upload-item';
 import { ViewItemDialog } from '@/components/dataset/view-item';
 import { TablePaging } from '@/components/base/pagination';
 
-import { useRecordList, useRecordField, useRecordActions } from '@/hooks/use-dataset';
+import { usePointList, usePointField, usePointActions } from '@/hooks/use-dataset';
 import { usePagingStore } from '@/stores/paging';
 import { downloadExcelFile } from '@/utils/excel';
-import { RecordInfo } from '@/types/dataset';
+import { PointInfo } from '@/types/dataset';
 import { formatTime } from '@/utils/time';
 
 
@@ -66,11 +66,11 @@ export const getColumnWidthClass = (fieldType: string): string => {
 };
 
 
-export function DatasetTable({ collection }: {
-  collection: string
+export function DatasetTable({ dataset }: {
+  dataset: string
 }) {
 
-  const pagingKey = `dataset_${collection}`;
+  const pagingKey = `dataset_${dataset}`;
   const { page, size } = usePagingStore((state) => state.getPaging(pagingKey));
   const { setSize, setPage, initPaging } = usePagingStore();
 
@@ -85,9 +85,9 @@ export function DatasetTable({ collection }: {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const { data, isLoading } = useRecordList(collection, params);
-  const { exportBatch } = useRecordActions(collection);
-  const { data: fields, isLoading: fieldsLoading } = useRecordField(collection);
+  const { data, isLoading } = usePointList(dataset, params);
+  const { exportBatch } = usePointActions(dataset);
+  const { data: fields, isLoading: fieldsLoading } = usePointField(dataset);
 
   // 过滤出需要在表格中显示的自定义字段（排除 content 和 updated_at）
   const displayFields = useMemo(() => {
@@ -100,13 +100,13 @@ export function DatasetTable({ collection }: {
   const batchExport = () => {
     exportBatch.mutate(selectedIds, {
       onSuccess: async (res) => {
-        const records = res.data;
+        const records = res.data ?? [];
         try {
           // 构建 Excel 数据
           const customFields = fields?.filter(f => f.field_name !== 'updated_at') ?? [];
           const headerRow = ['content', ...customFields.map(f => f.field_name)];
 
-          const dataRows = records.map((record: RecordInfo) => {
+          const dataRows = records.map((record: PointInfo) => {
             const payload = record.payload || {};
             return [
               payload.content || '',
@@ -115,7 +115,7 @@ export function DatasetTable({ collection }: {
           });
 
           const sheetData = [headerRow, ...dataRows];
-          downloadExcelFile(sheetData, `${collection}_选中数据.xlsx`, '数据集');
+          downloadExcelFile(sheetData, `${dataset}_选中数据.xlsx`, '数据集');
 
           toast.success(`成功导出 ${records.length} 条记录`);
         } catch (error) {
@@ -138,12 +138,12 @@ export function DatasetTable({ collection }: {
             <CardDescription>管理当前知识库中的 {data?.total || 0} 条向量数据</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <ManageFieldsDialog collection={collection} disabled={(data?.total || 0) > 0} />
-            <AddItemDialog collection={collection} />
-            <UploadItem collection={collection} />
-            <DownloadTemplate collection={collection} />
-            <ExportAllButton collection={collection} />
-            <ClearDatasetDialog collection={collection} />
+            <ManageFieldsDialog dataset={dataset} disabled={(data?.total || 0) > 0} />
+            <AddItemDialog dataset={dataset} />
+            <UploadItem dataset={dataset} />
+            <DownloadTemplate dataset={dataset} />
+            <ExportAllButton dataset={dataset} />
+            <ClearDatasetDialog dataset={dataset} />
           </div>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
@@ -213,10 +213,10 @@ export function DatasetTable({ collection }: {
                           <ViewItemDialog content={record.payload.content}/>
 
                           {/* 2. 修改向量 */}
-                          <EditItemDialog collection={collection} item={record} />
+                          <EditItemDialog dataset={dataset} item={record} />
 
                           {/* 3. 删除向量 */}
-                          <DeleteItemDialog collection={collection} item={record} />
+                          <DeleteItemDialog dataset={dataset} item={record} />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -261,7 +261,7 @@ export function DatasetTable({ collection }: {
             )}
             批量导出
           </Button>
-          <BatchDeleteItem collection={collection} ids={selectedIds} callback={() => setSelectedIds([])}/>
+          <BatchDeleteItem dataset={dataset} ids={selectedIds} callback={() => setSelectedIds([])}/>
         </div>
       )}
     </>

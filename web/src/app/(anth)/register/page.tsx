@@ -14,9 +14,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Field, FieldLabel, FieldGroup, FieldSet, FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { useAuthAction } from '@/hooks/use-auth';
-import { useGraph } from '@/hooks/use-chat';
+import { useAgent } from '@/hooks/use-chat';
 import { saveToken } from '@/utils/cookie';
-import { checkGraph } from '@/utils/local';
+import { checkAgent } from '@/utils/local';
 
 
 const formSchema = z.object({
@@ -60,10 +60,11 @@ export default function RegisterPage() {
   });
 
   const { signUp, clearCache } = useAuthAction();
-  const { data: graphs } = useGraph();
-  const graph_name = useMemo(() => {
-    return (graphs ?? []).map(o => o.name);
-  }, [graphs]);
+  const { data: agents } = useAgent();
+
+  const agent_name = useMemo(() => {
+    return (agents ?? []).map(o => o.name);
+  }, [agents]);
 
   async function onSubmit(values: FormValues) {
     const req = {
@@ -78,14 +79,14 @@ export default function RegisterPage() {
 
         await clearCache();
 
-        if (!graph_name?.[0]) {
-          toast.error('目前没有可用的 Graph');
+        if (!agent_name?.[0]) {
+          toast.error('目前没有可用的 Agent');
           return;
         }
 
-        const graph = checkGraph(graph_name);
+        const agent = checkAgent(agent_name);
 
-        router.push(`/chat/${graph}`);
+        router.push(`/chat/${agent}`);
       },
       onError: (err) => {
         toast.error(err?.message || '注册失败');

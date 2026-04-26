@@ -22,19 +22,19 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { renderFieldInput } from '@/components/dataset/add-item';
 
-import { useRecordField, useRecordActions } from '@/hooks/use-dataset';
+import { usePointField, usePointActions } from '@/hooks/use-dataset';
 import { cn } from '@/lib/utils';
-import { RecordInfo, CommonZod } from '@/types/dataset';
+import { PointInfo, CommonZod } from '@/types/dataset';
 import { PRESET_FIELD_NAME } from '@/utils/dataset';
 
 
-export function EditItemDialog({ collection, item }: {
-  collection: string
-  item: RecordInfo
+export function EditItemDialog({ dataset, item }: {
+  dataset: string
+  item: PointInfo
 }) {
 
-  const { update, jumpToLast } = useRecordActions(collection);
-  const { data: fields, isLoading: fieldsLoading } = useRecordField(collection);
+  const { update, jumpToLast } = usePointActions(dataset);
+  const { data: fields, isLoading: fieldsLoading } = usePointField(dataset);
 
   // 过滤出自定义字段（排除预设字段）
   const customFields = useMemo(() => {

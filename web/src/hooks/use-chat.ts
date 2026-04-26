@@ -2,143 +2,143 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getChatHistory, getGraphList, getThreadList, sendMessage } from '@/services/chat';
-import { ChatMessage, ChatThread, ChatReq } from '@/types/chat';
+import { getChatHistory, getAgentList, getConversationList, sendMessage } from '@/services/chat';
+import { ChatMessage, ChatConversation, ChatReq } from '@/types/chat';
 
 
 export const chatKeys = {
   temp_ai: 'temp-ai' as const,
   temp_user: 'temp-user' as const,
   all: [ 'chat' ] as const,
-  graph: () => [ ...chatKeys.all, 'graph' ] as const,
-  threads: () => [ ...chatKeys.all, 'threads' ] as const,
-  thread: (graph: string) => [ ...chatKeys.threads(), graph ] as const,
+  agent: () => [ ...chatKeys.all, 'agent' ] as const,
+  conversations: () => [ ...chatKeys.all, 'conversations' ] as const,
+  conversation: (agent: string) => [ ...chatKeys.conversations(), agent ] as const,
   histories: () => [ ...chatKeys.all, 'history' ] as const,
-  history: (graph: string, thread_id: string) => [ ...chatKeys.histories(), graph, thread_id ] as const,
+  history: (agent: string, conversation_id: string) => [ ...chatKeys.histories(), agent, conversation_id ] as const,
 };
 
 
-export function useGraph() {
+export function useAgent() {
   return useQuery({
-    queryKey: chatKeys.graph(),
-    queryFn: getGraphList,
+    queryKey: chatKeys.agent(),
+    queryFn: getAgentList,
     staleTime: 1000 * 60 * 10
   });
 }
 
-export function useThreads(graph: string, graphs: string[]) {
+export function useConversations(agent: string, agents: string[]) {
   return useQuery({
-    queryKey: chatKeys.thread(graph),
-    queryFn: () => getThreadList(graph).then(res => res.data),
-    enabled: graphs.includes(graph)
+    queryKey: chatKeys.conversation(agent),
+    queryFn: () => getConversationList(agent).then(res => res.data),
+    enabled: agents.includes(agent)
   });
 }
 
-export function useHistory(graph: string, thread_id: string) {
+export function useHistory(agent: string, conversation_id: string) {
   return useQuery({
-    // 联合 Key：只有当 graph 或 thread_id 变化时才刷新
-    queryKey: chatKeys.history(graph, thread_id),
-    queryFn: () => getChatHistory(graph, thread_id).then(res => res.data),
+    // 联合 Key：只有当 agent 或 conversation_id 变化时才刷新
+    queryKey: chatKeys.history(agent, conversation_id),
+    queryFn: () => getChatHistory(agent, conversation_id).then(res => res.data),
     // 只有当两个参数都存在时才允许执行
-    enabled: !!graph && !!thread_id,
+    enabled: !!agent && !!conversation_id,
     // 可选：如果希望进入页面时数据是最新的，可以设置
     staleTime: 1000 * 30 // 30秒内认为数据是新鲜的
   });
 }
 
-export function useChatAction(graph: string = '') {
+export function useChatAction(agent: string = '') {
   const queryClient = useQueryClient();
 
   const sendMsg = useMutation({
-    mutationFn: ({ req, onChunk, onFinished, onThreadCreated }: {
+    mutationFn: ({ req, onChunk, onFinished, onConversationCreated }: {
       req: ChatReq;
       onChunk: (content: string, node?: string) => void;
       onFinished?: () => void;
       onError?: () => void;
-      onThreadCreated?: (thread_id: string) => void;
+      onConversationCreated?: (conversation_id: string) => void;
     }) => {
-      const { thread_id } = req;
-      let finalThreadId = thread_id;
+      const { conversation_id } = req;
+      let finalConversationId = conversation_id;
 
       const onDone = async () => {
         // 对话完成后，刷新历史
-        if (finalThreadId) {
-          await queryClient.invalidateQueries({ queryKey: chatKeys.history(graph, finalThreadId) });
+        if (finalConversationId) {
+          await queryClient.invalidateQueries({ queryKey: chatKeys.history(agent, finalConversationId) });
         }
 
         // 对话完成后，刷新侧边栏
-        await queryClient.invalidateQueries({ queryKey: chatKeys.thread(graph) });
+        await queryClient.invalidateQueries({ queryKey: chatKeys.conversation(agent) });
 
         // 执行调用方传入的成功回调
         onFinished?.();
       };
 
-      const handleThreadCreated = (newThreadId: string) => {
-        finalThreadId = newThreadId;
-        onThreadCreated?.(newThreadId);
+      const handleConversationCreated = (newConversationId: string) => {
+        finalConversationId = newConversationId;
+        onConversationCreated?.(newConversationId);
       };
 
-      return sendMessage(req, onChunk, onDone, handleThreadCreated);
+      return sendMessage(req, onChunk, onDone, handleConversationCreated);
     },
     onMutate: async ({ req }) => {
-      const { thread_id, message } = req;
-      const optimisticThreadId = thread_id || '';
+      const { conversation_id, query } = req;
+      const optimisticConversationId = conversation_id || '';
 
       // 乐观更新侧边栏
-      await queryClient.cancelQueries({ queryKey: chatKeys.thread(graph) });
-      const previousThreads = queryClient.getQueryData<ChatThread[]>(chatKeys.thread(graph));
-      queryClient.setQueryData<ChatThread[]>(chatKeys.thread(graph), (old) => {
+      await queryClient.cancelQueries({ queryKey: chatKeys.conversation(agent) });
+      const previousConversations = queryClient.getQueryData<ChatConversation[]>(chatKeys.conversation(agent));
+      queryClient.setQueryData<ChatConversation[]>(chatKeys.conversation(agent), (old) => {
         const oldList = Array.isArray(old) ? old : [];
 
         // 旧对话逻辑，将该对话置顶
-        if (thread_id) {
-          const exists = oldList.find(t => t.thread_id === thread_id);
+        if (conversation_id) {
+          const exists = oldList.find(t => t.conversation_id === conversation_id);
           if (exists) {
-            const filtered = oldList.filter(t => t.thread_id !== thread_id);
+            const filtered = oldList.filter(t => t.conversation_id !== conversation_id);
             return [exists, ...filtered];
           }
         }
 
         // 新对话逻辑，加入临时对话
-        const optimisticThread: ChatThread = {
-          thread_id: optimisticThreadId,
-          summary: message, // 标题为首条消息
-          last_id: new Date().toISOString()
+        const optimisticConversation: ChatConversation = {
+          conversation_id: optimisticConversationId,
+          summary: query, // 标题为首条消息
+          last_message_id: new Date().toISOString()
         };
-        return [ optimisticThread, ...oldList ];
+        return [ optimisticConversation, ...oldList ];
       });
 
       // 历史记录乐观更新
-      await queryClient.cancelQueries({ queryKey: chatKeys.history(graph, optimisticThreadId) });
-      const previousHistory = queryClient.getQueryData<ChatMessage[]>(chatKeys.history(graph, optimisticThreadId));
+      await queryClient.cancelQueries({ queryKey: chatKeys.history(agent, optimisticConversationId) });
+      const previousHistory = queryClient.getQueryData<ChatMessage[]>(chatKeys.history(agent, optimisticConversationId));
 
       const userMsg: ChatMessage = {
-        id: chatKeys.temp_user,
+        message_id: chatKeys.temp_user,
         role: 'user',
-        content: message
+        content: query
       };
       const aiMsg: ChatMessage = {
-        id: chatKeys.temp_ai,
-        role: 'assistant',
+        message_id: chatKeys.temp_ai,
+        role: 'ai',
         content: '' // 初始为空，由 onChunk 更新
       };
-      queryClient.setQueryData<ChatMessage[]>(chatKeys.history(graph, optimisticThreadId), (old) => {
+      queryClient.setQueryData<ChatMessage[]>(chatKeys.history(agent, optimisticConversationId), (old) => {
         return [ ...(old ?? []), userMsg, aiMsg ];
       });
-      return { previousThreads, previousHistory, optimisticThreadId };
+      return { previousConversations, previousHistory, optimisticConversationId };
     },
     onError: (error, variables, context) => {
       console.error(error);
       const { onError } = variables;
 
       // 1. 回滚侧边栏
-      if (context?.previousThreads) {
-        queryClient.setQueryData(chatKeys.thread(graph), context.previousThreads);
+      if (context?.previousConversations) {
+        queryClient.setQueryData(chatKeys.conversation(agent), context.previousConversations);
       }
 
       // 2. 回滚历史记录
-      if (context?.previousHistory && variables.req.thread_id) {
-        queryClient.setQueryData(chatKeys.history(graph, variables.req.thread_id), context.previousHistory);
+      if (context?.previousHistory && variables.req.conversation_id) {
+        queryClient.setQueryData(chatKeys.history(agent, variables.req.conversation_id), context.previousHistory);
       }
 
       // 3. 执行回调
@@ -146,16 +146,16 @@ export function useChatAction(graph: string = '') {
     }
   });
 
-  const fetchGraph = async () => {
+  const fetchAgent = async () => {
     return await queryClient.fetchQuery({
-      queryKey: chatKeys.graph(),
-      queryFn: getGraphList,
+      queryKey: chatKeys.agent(),
+      queryFn: getAgentList,
       staleTime: 0
     });
   };
 
   return {
     sendMsg,
-    fetchGraph,
+    fetchAgent,
   };
 }

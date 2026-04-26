@@ -17,19 +17,19 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 
-import { useRecordActions } from '@/hooks/use-dataset';
+import { usePointActions } from '@/hooks/use-dataset';
 
 
 interface BatchDeleteItemProp {
-  collection: string
+  dataset: string
   ids: string[]
   callback: () => void
 }
 
 
-export function BatchDeleteItem({ collection, ids, callback }: BatchDeleteItemProp) {
+export function BatchDeleteItem({ dataset, ids, callback }: BatchDeleteItemProp) {
 
-  const { remove, checkPage } = useRecordActions(collection);
+  const { remove, checkPage } = usePointActions(dataset);
 
   const [ open, setOpen ] = useState(false);
 

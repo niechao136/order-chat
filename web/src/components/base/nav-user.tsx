@@ -38,7 +38,7 @@ import { useAuthAction } from '@/hooks/use-auth';
 import { handleLogout } from '@/services/api';
 import { UserInfo } from '@/types/user';
 import { clearToken } from '@/utils/cookie';
-import { saveGraph } from '@/utils/local';
+import { saveAgent } from '@/utils/local';
 import { getInitials } from '@/utils/string';
 
 
@@ -48,7 +48,7 @@ export function NavUser({ mode, owner }: {
 }) {
 
   const params = useParams();
-  const graph = params.graph as string;
+  const agent = params.agent as string;
   const router = useRouter();
 
   const { isMobile } = useSidebar();
@@ -66,7 +66,7 @@ export function NavUser({ mode, owner }: {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton asChild size="lg">
-            <Link href={`/login`} onClick={() => saveGraph(graph)}>
+            <Link href={`/login`} onClick={() => saveAgent(agent)}>
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarFallback className="rounded-lg">访</AvatarFallback>
               </Avatar>
@@ -89,7 +89,7 @@ export function NavUser({ mode, owner }: {
     }
     clearToken();
     await clearCache();
-    router.replace(`/chat/${graph}`);
+    router.replace(`/chat/${agent}`);
   };
 
   // 已登录用户的原有下拉菜单

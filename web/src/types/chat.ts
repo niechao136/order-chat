@@ -1,28 +1,28 @@
 
-export interface GraphConfig {
+export interface AgentConfig {
   name: string
   lang: string
-  collection_name: string
+  dataset: string
 }
 
-export interface ChatThread {
-  thread_id: string
-  last_id: string
+export interface ChatConversation {
+  conversation_id: string
+  last_message_id: string
   summary: string
 }
 
 export interface ChatReq {
-  graph: string
-  thread_id: string | null
-  message: string
+  agent: string
+  conversation_id: string | null
+  query: string
   lang: string
-  collection_name: string
+  dataset: string
 }
 
-export type MessageRole = 'user' | 'assistant';
+export type MessageRole = 'user' | 'ai';
 
 export interface ChatMessage {
-  id: string;
+  message_id: string;
   role: MessageRole;
   content: string;
 }

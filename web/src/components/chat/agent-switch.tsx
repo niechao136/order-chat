@@ -15,16 +15,16 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 
 
-export function GraphSwitch({ graphs, active }: {
-  graphs: string[],
+export function AgentSwitch({ agents, active }: {
+  agents: string[],
   active: string,
 }) {
 
   const router = useRouter();
   const { isMobile } = useSidebar();
 
-  const switchGraph = (graph: string) => {
-    router.push(`/chat/${graph}`)
+  const switchAgent = (agent: string) => {
+    router.push(`/chat/${agent}`)
   };
 
   return (
@@ -52,18 +52,18 @@ export function GraphSwitch({ graphs, active }: {
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Graphs
+              Agents
             </DropdownMenuLabel>
-            {graphs.map((graph, index) => (
+            {agents.map((agent, index) => (
               <DropdownMenuItem
-                key={graph}
-                onClick={() => switchGraph(graph)}
+                key={agent}
+                onClick={() => switchAgent(agent)}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-md border">
                   <VectorSquareIcon className="size-3.5 shrink-0" />
                 </div>
-                {graph}
+                {agent}
                 <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
               </DropdownMenuItem>
             ))}

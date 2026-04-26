@@ -10,15 +10,15 @@ class AgentState(BaseModel):
 
 
 class ProductItem(BaseModel):
-    id: str
-    name: str
-    price: float
-    descr: str
-    store: str
-    time: str
-    space_id: str
-    space: str
-    child_space_id: str
+    id: str = Field(description="商品ID")
+    name: str = Field(description="商品名称")
+    price: float = Field(description="商品价格")
+    descr: str = Field(description="商品描述")
+    store: str = Field(description="门店名称")
+    child_space_id: str = Field(description="门店ID")
+    space_id: str = Field(description="分区ID")
+    space: str = Field(description="分区名称")
+    time: str = Field(description="营业时间")
 
 
 class ProductIndex(str, Enum):

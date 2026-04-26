@@ -19,7 +19,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin/sidebar';
-import { useColList } from '@/hooks/use-dataset';
+import { useDatasetList } from '@/hooks/use-dataset';
 import { useOwner } from '@/hooks/use-user';
 import { NavItem } from '@/types/ui';
 
@@ -28,10 +28,10 @@ export function AdminBody({ children }: {
   children: ReactNode;
 }) {
   const params = useParams();
-  const collection = params.collection as string;
+  const dataset = params.dataset as string;
   const pathname = usePathname();
 
-  const { data: datasets } = useColList();
+  const { data: datasets } = useDatasetList();
   const { data: owner } = useOwner();
 
   const nav = useMemo(() => {
@@ -70,12 +70,12 @@ export function AdminBody({ children }: {
   const title = useMemo(() => {
     const breadcrumbs: string[] = [];
 
-    if (!!collection) {
+    if (!!dataset) {
       const parent = nav.find(item =>
-        item.children?.some(child => child.href?.includes(collection))
+        item.children?.some(child => child.href?.includes(dataset))
       );
       if (parent) breadcrumbs.push(parent.title);
-      breadcrumbs.push(collection);
+      breadcrumbs.push(dataset);
       return breadcrumbs;
     }
 
@@ -95,7 +95,7 @@ export function AdminBody({ children }: {
       if (child) breadcrumbs.push(child.title);
     }
     return breadcrumbs
-  }, [collection, pathname, nav]);
+  }, [dataset, pathname, nav]);
 
   return (
     <SidebarProvider>

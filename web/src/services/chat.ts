@@ -1,29 +1,29 @@
 import { apiRequest, getBaseUrl } from '@/services/api';
 import { PageResult } from '@/types/api';
-import { ChatThread, ChatMessage, ChatReq, GraphConfig } from '@/types/chat';
+import { ChatConversation, ChatMessage, ChatReq, AgentConfig } from '@/types/chat';
 import { getToken } from '@/utils/cookie';
 
 
-export async function getGraphList()  {
+export async function getAgentList()  {
   const res = await apiRequest('chat', {
     requireAuth: false,
   });
-  const data: GraphConfig[] = await res.json();
+  const data: AgentConfig[] = await res.json();
   return data;
 }
 
 
-export async function getThreadList(graph: string) {
-  const res = await apiRequest(`chat/${graph}`, {
+export async function getConversationList(agent: string) {
+  const res = await apiRequest(`chat/${agent}`, {
     requireAuth: false,
   });
-  const data: PageResult<ChatThread> = await res.json();
+  const data: PageResult<ChatConversation> = await res.json();
   return data;
 }
 
 
-export async function getChatHistory(graph: string, thread_id: string) {
-  const res = await apiRequest(`chat/${graph}/${thread_id}`, {
+export async function getChatHistory(agent: string, conversation_id: string) {
+  const res = await apiRequest(`chat/${agent}/${conversation_id}`, {
     requireAuth: false,
   });
   const data: PageResult<ChatMessage> = await res.json();
@@ -35,15 +35,15 @@ export async function sendMessage(
   req: ChatReq,
   onChunk: (content: string, node?: string) => void, // 收到碎片时的回调
   onDone?: () => void, // 结束时的回调
-  onThreadCreated?: (thread_id: string) => void // 新建会话时回调
+  onConversationCreated?: (conversation_id: string) => void // 新建会话时回调
 ) {
 
   const token = await getToken();
   const baseUrl = getBaseUrl();
 
-  const { graph, ...body } = req;
+  const { agent, ...body } = req;
 
-  const response = await fetch(`${baseUrl}/chat/${graph}/stream`, {
+  const response = await fetch(`${baseUrl}/chat/${agent}/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -59,8 +59,8 @@ export async function sendMessage(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = ""; // 用于处理不完整的行
-  // 标记是否已处理 thread_id 事件
-  let threadIdProcessed = false;
+  // 标记是否已处理 conversation_id 事件
+  let conversationIdProcessed = false;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -91,11 +91,11 @@ export async function sendMessage(
       try {
         const parsed = JSON.parse(data);
 
-        // 处理 thread_id 事件
-        if (parsed.type === 'thread_id') {
-          if (!threadIdProcessed) {
-            threadIdProcessed = true;
-            onThreadCreated?.(parsed.thread_id);
+        // 处理 conversation_id 事件
+        if (parsed.type === 'conversation_id') {
+          if (!conversationIdProcessed) {
+            conversationIdProcessed = true;
+            onConversationCreated?.(parsed.conversation_id);
           }
           continue; // 不是消息内容，跳过
         }

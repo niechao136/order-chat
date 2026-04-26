@@ -34,7 +34,7 @@ const formSchema = z.object({
     .string()
     .trim()
     .min(1, { message: '请输入语言代码' }),
-  collection_name: z
+  dataset: z
     .string()
     .trim()
     .min(1, { message: '请选择知识库' }),
@@ -45,12 +45,12 @@ type FormValues = z.infer<typeof formSchema>;
 interface ChatConfigProp {
   disabled: boolean
   lang: string
-  collection_name: string
-  collections: string[]
-  setConfig: (lang: string, collection_name: string) => void
+  dataset: string
+  datasets: string[]
+  setConfig: (lang: string, dataset: string) => void
 }
 
-export function ChatConfig({ collection_name, collections, disabled, lang, setConfig }: ChatConfigProp) {
+export function ChatConfig({ dataset, datasets, disabled, lang, setConfig }: ChatConfigProp) {
 
   const [ open, setOpen ] = useState(false);
 
@@ -61,11 +61,11 @@ export function ChatConfig({ collection_name, collections, disabled, lang, setCo
     formState: { errors }
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { lang: lang, collection_name: collection_name }
+    defaultValues: { lang: lang, dataset: dataset }
   });
 
   const onSubmit = (values: FormValues) => {
-    setConfig(values.lang, values.collection_name);
+    setConfig(values.lang, values.dataset);
     setOpen(false);
   };
 
@@ -96,11 +96,11 @@ export function ChatConfig({ collection_name, collections, disabled, lang, setCo
               />
               {errors.lang && <FieldError errors={[ errors.lang ]}/>}
             </Field>
-            <Field data-invalid={!!errors.collection_name}>
+            <Field data-invalid={!!errors.dataset}>
               <FieldLabel>知识库</FieldLabel>
               <Controller
                 control={control}
-                name={'collection_name'}
+                name={'dataset'}
                 render={({ field }) => (
                   <Select
                     value={field.value}
@@ -110,7 +110,7 @@ export function ChatConfig({ collection_name, collections, disabled, lang, setCo
                       <SelectValue/>
                     </SelectTrigger>
                     <SelectContent>
-                      {collections.map((item) => (
+                      {datasets.map((item) => (
                         <SelectItem key={item} value={item} className="text-xs">
                           {item}
                         </SelectItem>
@@ -119,7 +119,7 @@ export function ChatConfig({ collection_name, collections, disabled, lang, setCo
                   </Select>
                 )}
               />
-              {errors.collection_name && <FieldError errors={[ errors.collection_name ]}/>}
+              {errors.dataset && <FieldError errors={[ errors.dataset ]}/>}
             </Field>
           </FieldGroup>
 

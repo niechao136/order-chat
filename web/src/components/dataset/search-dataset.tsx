@@ -17,16 +17,16 @@ import { Slider } from '@/components/ui/slider';
 
 import { FilterBuilder } from '@/components/dataset/filter-builder';
 
-import { useRecordField, useRecordActions } from '@/hooks/use-dataset';
+import { usePointActions, usePointField } from '@/hooks/use-dataset';
 import { ScoredPoint, FilterCondition, FieldItem, FieldType } from '@/types/dataset';
 
 
-export function SearchDataset({ collection }: {
-  collection: string
+export function SearchDataset({ dataset }: {
+  dataset: string
 }) {
 
-  const { search } = useRecordActions(collection);
-  const { data: fieldList = [] } = useRecordField(collection);
+  const { search } = usePointActions(dataset);
+  const { data: fieldList = [] } = usePointField(dataset);
 
   // 构建字段名数组和类型映射
   const fieldNames = fieldList.map((f: FieldItem) => f.field_name);
@@ -59,7 +59,7 @@ export function SearchDataset({ collection }: {
 
     search.mutate({ text, top_k: topK, filters }, {
       onSuccess: (res) => {
-        setResult(res.data);
+        setResult(res.data ?? []);
         setSearched(true);
         toast.success('检索成功');
       },

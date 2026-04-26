@@ -1,32 +1,32 @@
 
 import { apiRequest } from '@/services/api';
 import { DataResult, PageParams, PageResult } from '@/types/api';
-import { ColDescr, ColInfo, FieldItem, RecordInfo, ScoredPoint } from '@/types/dataset';
+import { DatasetDescr, DatasetInfo, FieldItem, PointInfo, ScoredPoint } from '@/types/dataset';
 import { getParams } from '@/utils/string';
 
 
-export async function getColList() {
+export async function getDatasetList() {
   const res = await apiRequest('dataset');
-  const data: PageResult<ColDescr> = await res.json();
+  const data: DataResult<DatasetDescr[]> = await res.json();
   return data;
 }
 
-export async function addCol(body: string) {
+export async function addDataset(body: string) {
   const res = await apiRequest('dataset', {
     method: 'POST',
     body,
   });
-  const data: DataResult<ColInfo> = await res.json();
+  const data: DataResult<DatasetInfo> = await res.json();
   return data;
 }
 
-export async function getColInfo(name: string) {
+export async function getDatasetInfo(name: string) {
   const res = await apiRequest(`dataset/${name}`);
-  const data: DataResult<ColInfo> = await res.json();
+  const data: DataResult<DatasetInfo> = await res.json();
   return data;
 }
 
-export async function deleteCol(name: string) {
+export async function deleteDataset(name: string) {
   const res = await apiRequest(`dataset/${name}`, {
     method: 'DELETE',
   });
@@ -34,7 +34,7 @@ export async function deleteCol(name: string) {
   return data;
 }
 
-export async function clearCol(name: string) {
+export async function clearDataset(name: string) {
   const res = await apiRequest(`dataset/${name}/clear`, {
     method: 'DELETE',
   });
@@ -42,35 +42,35 @@ export async function clearCol(name: string) {
   return data;
 }
 
-export async function getRecordList(name: string, params?: PageParams) {
-  const res = await apiRequest(`dataset/${name}/item${getParams(params)}`);
-  const data: PageResult<RecordInfo> = await res.json();
+export async function getPointList(name: string, params?: PageParams) {
+  const res = await apiRequest(`dataset/${name}/points${getParams(params)}`);
+  const data: PageResult<PointInfo> = await res.json();
   return data;
 }
 
-export async function getRecordCount(name: string) {
+export async function getPointCount(name: string) {
   const res = await apiRequest(`dataset/${name}/count`);
   const data: DataResult<number> = await res.json();
   return data;
 }
 
-export async function getAllRecord(name: string) {
+export async function getAllPoints(name: string) {
   const res = await apiRequest(`dataset/${name}/all`);
-  const data: PageResult<RecordInfo> = await res.json();
+  const data: DataResult<PointInfo[]> = await res.json();
   return data;
 }
 
-export async function getBatchRecord(name: string, body: string) {
+export async function getBatchPoints(name: string, body: string) {
   const res = await apiRequest(`dataset/${name}/batch`, {
     method: 'POST',
     body,
   });
-  const data: PageResult<RecordInfo> = await res.json();
+  const data: DataResult<PointInfo[]> = await res.json();
   return data;
 }
 
-export async function addRecord(name: string, body: string) {
-  const res = await apiRequest(`dataset/${name}/item`, {
+export async function addPoint(name: string, body: string) {
+  const res = await apiRequest(`dataset/${name}/points`, {
     method: 'POST',
     body,
   });
@@ -78,8 +78,8 @@ export async function addRecord(name: string, body: string) {
   return data;
 }
 
-export async function uploadRecord(name: string, body: string) {
-  const res = await apiRequest(`dataset/${name}/item/upload`, {
+export async function uploadPoints(name: string, body: string) {
+  const res = await apiRequest(`dataset/${name}/upload`, {
     method: 'POST',
     body,
   });
@@ -87,8 +87,8 @@ export async function uploadRecord(name: string, body: string) {
   return data;
 }
 
-export async function updateRecord(name: string, id: string, body: string) {
-  const res = await apiRequest(`dataset/${name}/item/${id}`, {
+export async function updatePoint(name: string, id: string, body: string) {
+  const res = await apiRequest(`dataset/${name}/point/${id}`, {
     method: 'PUT',
     body,
   });
@@ -96,14 +96,14 @@ export async function updateRecord(name: string, id: string, body: string) {
   return data;
 }
 
-export async function getRecordInfo(name: string, id: string) {
-  const res = await apiRequest(`dataset/${name}/item/${id}`);
-  const data: DataResult<RecordInfo> = await res.json();
+export async function getPointInfo(name: string, id: string) {
+  const res = await apiRequest(`dataset/${name}/point/${id}`);
+  const data: DataResult<PointInfo> = await res.json();
   return data;
 }
 
-export async function deleteRecord(name: string, body: string) {
-  const res = await apiRequest(`dataset/${name}/item/delete`, {
+export async function deletePoints(name: string, body: string) {
+  const res = await apiRequest(`dataset/${name}/points`, {
     method: 'DELETE',
     body,
   });
@@ -111,12 +111,12 @@ export async function deleteRecord(name: string, body: string) {
   return data;
 }
 
-export async function searchRecord(name: string, body: string) {
+export async function searchPoints(name: string, body: string) {
   const res = await apiRequest(`dataset/${name}/search`, {
     method: 'POST',
     body,
   });
-  const data: PageResult<ScoredPoint> = await res.json();
+  const data: DataResult<ScoredPoint[]> = await res.json();
   return data;
 }
 

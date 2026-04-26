@@ -6,38 +6,38 @@ import { useParams } from 'next/navigation';
 
 import { ChatInput } from '@/components/chat/chat-input';
 import { MessageList } from '@/components/chat/message-list';
-import { useHistory, chatKeys, useGraph } from '@/hooks/use-chat';
-import { useColList } from '@/hooks/use-dataset';
+import { useHistory, chatKeys, useAgent } from '@/hooks/use-chat';
+import { useDatasetList } from '@/hooks/use-dataset';
 import { useChatStore } from '@/stores/chat';
 
 
-export default function ThreadPage() {
+export default function ConversationPage() {
 
   const params = useParams();
-  const graph = params.graph as string;
-  const thread_id = params.thread_id as string;
+  const agent = params.agent as string;
+  const conversation_id = params.conversation_id as string;
 
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingContent = useChatStore((s) => s.streamingContent);
 
-  const { data: cols } = useColList();
-  const { data: graphs } = useGraph();
-  const { data: history } = useHistory(graph, thread_id);
+  const { data: dataset } = useDatasetList();
+  const { data: agents } = useAgent();
+  const { data: history } = useHistory(agent, conversation_id);
 
-  const graphConfig = useMemo(() => {
-    return (graphs ?? []).find(o => o.name === graph) ?? null;
-  }, [graphs, graph]);
+  const agentConfig = useMemo(() => {
+    return (agents ?? []).find(o => o.name === agent) ?? null;
+  }, [agents, agent]);
 
-  const collections = useMemo(() => {
-    return (cols ?? []).map(o => o.name);
-  }, [cols]);
+  const datasets = useMemo(() => {
+    return (dataset ?? []).map(o => o.name);
+  }, [dataset]);
 
   const displayMessages = useMemo(() => {
     const msgs = history ?? [];
     if (!isStreaming) return msgs;
 
     return msgs.map(o =>
-      o.id === chatKeys.temp_ai ? { ...o, content: streamingContent } : o
+      o.message_id === chatKeys.temp_ai ? { ...o, content: streamingContent } : o
     );
   }, [ history, isStreaming, streamingContent ]);
 
@@ -47,12 +47,12 @@ export default function ThreadPage() {
         messages={displayMessages}
       />
 
-      {graphConfig && (
+      {agentConfig && (
         <ChatInput
-          graph={graph}
+          agent={agent}
           start={false}
-          config={graphConfig}
-          collections={collections}
+          config={agentConfig}
+          datasets={datasets}
         />)}
     </div>
   );

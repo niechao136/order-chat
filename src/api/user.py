@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends
-from typing import List, Optional
+from fastapi import APIRouter, Depends, Path, Body
+from typing import List, Optional, Annotated
 
 from src.database.postgre import get_db_pool
 from src.schemas.auth import TokenDict
@@ -10,14 +10,22 @@ from src.utils.auth import get_current_admin, get_current_user, get_optional_cur
 from src.utils.security import pwd_context
 
 
-user_router = APIRouter(prefix="/user", tags=["User"])
+user_router = APIRouter(
+    prefix="/user",
+    tags=["User 管理"]
+)
 
 
-@user_router.get("", response_model=PageResult[UserInfo])
+@user_router.get(
+    path="",
+    response_model=PageResult[UserInfo],
+    summary="获取用户列表",
+    description="分页获取所有未删除的用户。支持按用户名或邮箱模糊搜索，按指定字段排序。",
+)
 async def user_list(
-        params: PageParams = Depends(),
-        _: TokenDict = Depends(get_current_admin),
-        pool = Depends(get_db_pool)
+    params: Annotated[PageParams, Depends()],
+    _: TokenDict = Depends(get_current_admin),
+    pool = Depends(get_db_pool)
 ):
     async with pool.connection() as conn:
         base_query = "FROM users WHERE deleted_at IS NULL"
@@ -56,14 +64,16 @@ async def user_list(
         )
 
 
-@user_router.get("/count", response_model=DataResult[int])
+@user_router.get(
+    path="/count",
+    response_model=DataResult[int],
+    summary="获取活跃用户总数",
+    description="返回未软删除的用户数量。"
+)
 async def user_count(
-        _: TokenDict = Depends(get_current_admin),
-        pool = Depends(get_db_pool)
+    _: TokenDict = Depends(get_current_admin),
+    pool = Depends(get_db_pool)
 ):
-    """
-    获取活跃用户总数（未软删除的用户）
-    """
     async with pool.connection() as conn:
         cur = await conn.execute(
             "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL"
@@ -73,10 +83,15 @@ async def user_count(
         return DataResult(status=1, data=count)
 
 
-@user_router.get("/me", response_model=DataResult[UserInfo])
+@user_router.get(
+    path="/me",
+    response_model=DataResult[Optional[UserInfo]],
+    summary="获取当前登录用户信息",
+    description="如果已登录，返回当前用户的详细信息；未登录时返回 data 为 null。"
+)
 async def current_user(
-        user: Optional[TokenDict] = Depends(get_optional_current_user),
-        pool = Depends(get_db_pool)
+    user: Annotated[Optional[TokenDict], Depends(get_optional_current_user)],
+    pool = Depends(get_db_pool)
 ):
     if not user:
         return DataResult(status=1, data=None)
@@ -96,11 +111,16 @@ async def current_user(
         return DataResult(status=1, data=UserInfo(**hand_id(row)))
 
 
-@user_router.get("/{user_id}", response_model=DataResult[UserInfo])
+@user_router.get(
+    path="/{user_id}",
+    response_model=DataResult[UserInfo],
+    summary="获取指定用户信息",
+    description="根据用户 ID 获取用户详情，需要管理员权限。"
+)
 async def user_info(
-        user_id: str,
-        _: TokenDict = Depends(get_current_admin),
-        pool = Depends(get_db_pool)
+    user_id: Annotated[str, Path(description="用户 ID")],
+    _: TokenDict = Depends(get_current_admin),
+    pool = Depends(get_db_pool)
 ):
     async with pool.connection() as conn:
         cur = await conn.execute(
@@ -117,11 +137,16 @@ async def user_info(
         return DataResult(status=1, data=UserInfo(**hand_id(row)))
 
 
-@user_router.post("", response_model=DataResult[UserInfo])
+@user_router.post(
+    path="",
+    response_model=DataResult[UserInfo],
+    summary="新增用户",
+    description="管理员创建新用户，提供用户名、邮箱、密码和角色。用户名不能与已存在的活跃用户重复。"
+)
 async def add_user(
-        user: UserAdd,
-        _: TokenDict = Depends(get_current_admin),
-        pool = Depends(get_db_pool)
+    user: Annotated[UserAdd, Body(description="用户信息")],
+    _: TokenDict = Depends(get_current_admin),
+    pool = Depends(get_db_pool)
 ):
     async with pool.connection() as conn:
         async with conn.transaction():
@@ -145,12 +170,17 @@ async def add_user(
             return DataResult(status=1, data=info)
 
 
-@user_router.put("/{user_id}", response_model=DataResult[UserInfo])
+@user_router.put(
+    path="/{user_id}",
+    response_model=DataResult[UserInfo],
+    summary="更新用户信息",
+    description="按 ID 更新用户资料，包括用户名、邮箱、角色。不能修改密码。"
+)
 async def update_user(
-        user_id: str,
-        user: UserUpdate,
-        _: TokenDict = Depends(get_current_admin),
-        pool = Depends(get_db_pool)
+    user_id: Annotated[str, Path(description="要更新的用户 ID")],
+    user: Annotated[UserUpdate, Body(description="用户更新数据")],
+    _: TokenDict = Depends(get_current_admin),
+    pool = Depends(get_db_pool)
 ):
     async with pool.connection() as conn:
         async with conn.transaction():
@@ -188,11 +218,16 @@ async def update_user(
             return DataResult(status=1, data=info)
 
 
-@user_router.delete("", response_model=DataResult[List[str]])
+@user_router.delete(
+    path="",
+    response_model=DataResult[List[str]],
+    summary="批量软删除用户",
+    description="根据提供的用户 ID 列表执行软删除操作（设置 deleted_at 时间戳）。"
+)
 async def delete_user(
-        req: UserDel,
-        _: TokenDict = Depends(get_current_admin),
-        pool = Depends(get_db_pool)
+    req: Annotated[UserDel, Body(description="包含要删除的用户 ID 列表")],
+    _: TokenDict = Depends(get_current_admin),
+    pool = Depends(get_db_pool)
 ):
     if not req.ids:
         return DataResult(status=0, msg="No user IDs provided")
@@ -223,11 +258,16 @@ async def delete_user(
             return DataResult(status=1, data=deleted_ids)
 
 
-@user_router.patch("/me/password", response_model=DataResult[str])
+@user_router.patch(
+    path="/me/password",
+    response_model=DataResult[str],
+    summary="当前用户修改密码",
+    description="当前登录用户修改自己的密码，需要提供新密码。"
+)
 async def change_my_password(
-        info: UserPassword,
-        user: TokenDict = Depends(get_current_user),
-        pool = Depends(get_db_pool)
+    info: Annotated[UserPassword, Body(description="新密码")],
+    user: TokenDict = Depends(get_current_user),
+    pool = Depends(get_db_pool)
 ):
     async with pool.connection() as conn:
         async with conn.transaction():
@@ -243,12 +283,17 @@ async def change_my_password(
             return DataResult(status=1)
 
 
-@user_router.patch("/{user_id}/password", response_model=DataResult[str])
+@user_router.patch(
+    path="/{user_id}/password",
+    response_model=DataResult[str],
+    summary="管理员重置用户密码",
+    description="管理员为指定用户 ID 重置密码。"
+)
 async def admin_reset_password(
-        user_id: str,
-        info: UserPassword,
-        _: TokenDict = Depends(get_current_admin),
-        pool = Depends(get_db_pool)
+    user_id: Annotated[str, Path(description="目标用户 ID")],
+    info: Annotated[UserPassword, Body(description="新密码")],
+    _: TokenDict = Depends(get_current_admin),
+    pool = Depends(get_db_pool)
 ):
     async with pool.connection() as conn:
         async with conn.transaction():

@@ -8,8 +8,8 @@ import { useParams } from 'next/navigation';
 import { ChatInput } from '@/components/chat/chat-input';
 import { MessageList } from '@/components/chat/message-list';
 
-import { useGraph, useHistory, chatKeys } from '@/hooks/use-chat';
-import { useColList } from '@/hooks/use-dataset';
+import { useAgent, useHistory, chatKeys } from '@/hooks/use-chat';
+import { useDatasetList } from '@/hooks/use-dataset';
 import { useChatStore } from '@/stores/chat';
 
 
@@ -30,47 +30,47 @@ function ChatWelcome() {
 }
 
 
-export default function GraphPage() {
+export default function AgentPage() {
 
   const params = useParams();
-  const graph = params.graph as string;
+  const agent = params.agent as string;
 
-  const threadId = useChatStore((s) => s.threadId);
-  const pendingThreadId = useChatStore((s) => s.pendingThreadId);
+  const conversationId = useChatStore((s) => s.conversationId);
+  const pendingConversationId = useChatStore((s) => s.pendingConversationId);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingContent = useChatStore((s) => s.streamingContent);
 
-  const { data: cols } = useColList();
-  const { data: graphs } = useGraph();
-  const { data: history } = useHistory(graph, threadId ?? '');
+  const { data: dataset } = useDatasetList();
+  const { data: agents } = useAgent();
+  const { data: history } = useHistory(agent, conversationId ?? '');
 
-  const graphConfig = useMemo(() => {
-    return (graphs ?? []).find(o => o.name === graph) ?? null;
-  }, [graphs, graph]);
+  const agentConfig = useMemo(() => {
+    return (agents ?? []).find(o => o.name === agent) ?? null;
+  }, [agents, agent]);
 
-  const collections = useMemo(() => {
-    return (cols ?? []).map(o => o.name);
-  }, [cols]);
+  const datasets = useMemo(() => {
+    return (dataset ?? []).map(o => o.name);
+  }, [dataset]);
 
   const displayMessages = useMemo(() => {
     const msgs = history ?? [];
     if (!isStreaming) return msgs;
 
     return msgs.map(o =>
-      o.id === chatKeys.temp_ai ? { ...o, content: streamingContent } : o
+      o.message_id === chatKeys.temp_ai ? { ...o, content: streamingContent } : o
     );
   }, [ history, isStreaming, streamingContent ]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4">
-      {pendingThreadId || threadId ? <MessageList messages={displayMessages}/> : <ChatWelcome/>}
+      {pendingConversationId || conversationId ? <MessageList messages={displayMessages}/> : <ChatWelcome/>}
 
-      {graphConfig && (
+      {agentConfig && (
         <ChatInput
-          graph={graph}
+          agent={agent}
           start={true}
-          config={graphConfig}
-          collections={collections}
+          config={agentConfig}
+          datasets={datasets}
         />)}
     </div>
   );

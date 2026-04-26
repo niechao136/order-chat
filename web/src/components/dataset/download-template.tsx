@@ -5,12 +5,12 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { useRecordField } from '@/hooks/use-dataset';
+import { usePointField } from '@/hooks/use-dataset';
 import { FieldItem } from '@/types/dataset';
 import { downloadExcelFile } from '@/utils/excel';
 
 interface DownloadTemplateProps {
-  collection: string;
+  dataset: string;
 }
 
 // 根据字段类型生成示例值
@@ -46,8 +46,8 @@ function buildExampleRow(fields: FieldItem[]): string[] {
   return [contentExample, ...fieldExamples];
 }
 
-export function DownloadTemplate({ collection }: DownloadTemplateProps) {
-  const { data: fields, isLoading } = useRecordField(collection);
+export function DownloadTemplate({ dataset }: DownloadTemplateProps) {
+  const { data: fields, isLoading } = usePointField(dataset);
 
   const handleDownload = useCallback(() => {
     if (!fields) {
@@ -65,14 +65,14 @@ export function DownloadTemplate({ collection }: DownloadTemplateProps) {
 
       const sheetData = [headerRow, exampleRow];
 
-      downloadExcelFile(sheetData, `${collection}_上传模板.xlsx`, '上传模板')
+      downloadExcelFile(sheetData, `${dataset}_上传模板.xlsx`, '上传模板')
 
       toast.success('模板下载成功');
     } catch (error) {
       console.error('生成模板失败:', error);
       toast.error('生成模板失败，请重试');
     }
-  }, [fields, collection]);
+  }, [fields, dataset]);
 
   return (
     <Button

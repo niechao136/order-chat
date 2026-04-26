@@ -1,13 +1,13 @@
 import * as z from 'zod';
 
-export interface ColDescr {
+export interface DatasetDescr {
   name: string
 }
 
-export type ColStatus = 'green' | 'yellow' | 'grey' | 'red'
+export type DatasetStatus = 'green' | 'yellow' | 'grey' | 'red'
 
-export interface ColInfo {
-  status: ColStatus
+export interface DatasetInfo {
+  status: DatasetStatus
   indexed_vectors_count?: number
   points_count?: number
   segments_count: number
@@ -19,7 +19,7 @@ export interface PayloadInfo {
   [key: string]: unknown
 }
 
-export interface RecordInfo {
+export interface PointInfo {
   id: string
   payload: PayloadInfo
 }

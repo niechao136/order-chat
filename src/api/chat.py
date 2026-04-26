@@ -7,7 +7,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, BaseMessageChunk,
 
 from src.database.postgre import get_db_pool
 from src.schemas.chat import AgentConfig, ChatRequest, ChatResponse, ConversationItem, MessageItem
-from src.schemas.page import NoPageResult
+from src.schemas.page import DataResult
 from src.utils.auth import get_chat_entity
 from src.utils.chat import AGENT_CONFIG, check_conversation_access, get_agent, get_content, prepare_chat_session
 
@@ -34,11 +34,11 @@ async def get_agent_config():
 
 @chat_router.get(
     path="/{agent_name}",
-    response_model=NoPageResult[ConversationItem],
+    response_model=DataResult[List[ConversationItem]],
     summary="获取会话列表",
     description="查询当前用户在指定 Agent 下的所有历史对话记录，并按最后更新时间倒序排列。"
 )
-async def get_all_threads(
+async def get_all_conversations(
         agent_name: Annotated[str, Path(description="Agent 名称", examples=["find"])],
         user_identifier: Annotated[str, Depends(get_chat_entity)],
         pool = Depends(get_db_pool)
@@ -59,7 +59,6 @@ async def get_all_threads(
         ORDER BY last_update DESC NULLS LAST
         """, (user_identifier, agent_name))
         rows = await cur.fetchall()
-        total = len(rows)
 
     res = []
     for t in rows:
@@ -85,8 +84,8 @@ async def get_all_threads(
             last_message_id=t["last_update"])
         )
 
-    return NoPageResult(
-        total=total,
+    return DataResult(
+        status=1,
         data=res
     )
 
@@ -115,7 +114,7 @@ async def send_message(
     messages: List[BaseMessage] = result.get("messages", [])
     reply = messages[-1]
     message = MessageItem(
-        message_id=reply.id,
+        message_id=str(reply.id),
         role="ai",
         content=get_content(reply.content)
     )
@@ -189,7 +188,7 @@ async def send_message_stream(
 
 @chat_router.get(
     path="/{agent_name}/{conversation_id}",
-    response_model=NoPageResult[MessageItem],
+    response_model=DataResult[List[MessageItem]],
     summary="获取历史对话详情",
     description="获取指定会话的所有消息记录。会自动过滤工具调用等中间过程，仅返回用户和 AI 的对话文字。"
 )
@@ -212,7 +211,7 @@ async def get_chat_history(
     state = await agent.aget_state(config)
 
     if not state or not state.values:
-        return NoPageResult(total=0, data=[])
+        return DataResult(status=1, data=[])
 
     messages: List[BaseMessage] = state.values.get("messages", [])
     data: List[MessageItem] = []
@@ -220,15 +219,15 @@ async def get_chat_history(
     for msg in messages:
         if isinstance(msg, HumanMessage):
             data.append(MessageItem(
-                message_id=msg.id,
+                message_id=str(msg.id),
                 role="user",
                 content=get_content(msg.content)
             ))
         elif isinstance(msg, AIMessage) and not msg.tool_calls:
             data.append(MessageItem(
-                message_id=msg.id,
+                message_id=str(msg.id),
                 role="ai",
                 content=get_content(msg.content)
             ))
 
-    return NoPageResult(total=len(data), data=data)
+    return DataResult(status=1, data=data)

@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useColAction } from '@/hooks/use-dataset';
+import { useDatasetAction } from '@/hooks/use-dataset';
 
 // 定义表单校验逻辑
 const formSchema = z.object({
@@ -35,7 +35,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function AddDatasetDialog() {
 
-  const { add, refresh } = useColAction();
+  const { add, refresh } = useDatasetAction();
 
   const [ open, setOpen ] = useState(false);
 
@@ -74,7 +74,7 @@ export function AddDatasetDialog() {
           <PlusIcon className="mr-2 h-4 w-4" /> 新增知识库
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="p-2 bg-primary/10 rounded-lg">

@@ -9,6 +9,7 @@ from google.genai.types import HttpOptions, HttpxClient
 
 load_dotenv()
 
+
 http_options = None
 client_args = None
 proxy = os.getenv("AI_HTTP_PROXY")

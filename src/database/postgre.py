@@ -6,6 +6,7 @@ if sys.platform == 'win32':
 
 import os
 from dotenv import load_dotenv
+from typing import Any, Optional
 
 from psycopg_pool import AsyncConnectionPool
 from psycopg import AsyncConnection
@@ -28,7 +29,7 @@ admin_pwd = os.getenv("ADMIN_PASSWORD", "admin@123")
 
 CONN_INFO = f"postgresql://{user}:{password}@{host}:{port}/{database}"
 
-_pool: AsyncConnectionPool[AsyncConnection[dict]] | None = None
+_pool: Optional[AsyncConnectionPool[AsyncConnection[Any]]] = None
 
 
 def force_selector_loop():
@@ -47,7 +48,7 @@ async def init_pool():
         return _pool
 
     print(f"正在初始化数据库连接池...")
-    _pool = AsyncConnectionPool(
+    pool = AsyncConnectionPool(
         conninfo=CONN_INFO,
         min_size=2,
         max_size=20,
@@ -57,9 +58,10 @@ async def init_pool():
             "autocommit": True  # 开启自动提交，符合大多数 Web 应用逻辑
         }
     )
-    await _pool.open()
+    await pool.open()
+    _pool = pool
     print(f"连接池初始化成功: {_pool}")
-    return _pool
+    return pool
 
 
 async def close_pool():
@@ -70,9 +72,9 @@ async def close_pool():
         print("数据库连接池已关闭")
 
 
-async def get_db_pool() -> AsyncConnectionPool[AsyncConnection[dict]]:
+async def get_db_pool() -> AsyncConnectionPool[AsyncConnection[Any]]:
     if _pool is None:
-        await init_pool()
+        return await init_pool()
     return _pool
 
 

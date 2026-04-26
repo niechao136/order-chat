@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from "@/components/ui/textarea";
 
-import { useRecordField, useRecordActions } from '@/hooks/use-dataset';
+import { usePointField, usePointActions } from '@/hooks/use-dataset';
 import { cn } from '@/lib/utils';
 import { FieldItem, CommonZod } from '@/types/dataset';
 import { PRESET_FIELD_NAME } from '@/utils/dataset';
@@ -123,12 +123,12 @@ export const renderFieldInput = (
 };
 
 
-export function AddItemDialog({ collection }: {
-  collection: string
+export function AddItemDialog({ dataset }: {
+  dataset: string
 }) {
 
-  const { add, jumpToLast } = useRecordActions(collection);
-  const { data: fields, isLoading: fieldsLoading } = useRecordField(collection);
+  const { add, jumpToLast } = usePointActions(dataset);
+  const { data: fields, isLoading: fieldsLoading } = usePointField(dataset);
 
   const [ open, setOpen ] = useState(false);
 
@@ -256,7 +256,7 @@ export function AddItemDialog({ collection }: {
           <PlusIcon className="mr-2 h-4 w-4"/> 新增向量
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>创建新向量</DialogTitle>
           <DialogDescription>
@@ -281,7 +281,7 @@ export function AddItemDialog({ collection }: {
                 placeholder="请输入"
                 {...register('content')}
                 className={cn(
-                  'min-h-[150px] leading-relaxed',
+                  'min-h-37.5 leading-relaxed',
                   errors.content && 'border-destructive'
                 )}
                 autoComplete="off"

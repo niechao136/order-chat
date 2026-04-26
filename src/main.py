@@ -25,7 +25,7 @@ async def lifespan(_: FastAPI):
 
     await init_pool()
     await init_db()
-    await init_qdrant_async()
+    init_qdrant_async()
 
     yield
 

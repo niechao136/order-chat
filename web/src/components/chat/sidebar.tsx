@@ -19,29 +19,29 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { NavUser } from '@/components/base/nav-user';
-import { GraphSwitch } from '@/components/chat/graph-switch';
-import { ChatThread } from '@/types/chat';
+import { AgentSwitch } from '@/components/chat/agent-switch';
+import { ChatConversation } from '@/types/chat';
 import { UserInfo } from '@/types/user';
 
-export function ChatSidebar({ graphs, owner, threads }: {
-  graphs: string[]
+export function ChatSidebar({ agents, owner, conversations }: {
+  agents: string[]
   owner: UserInfo | null
-  threads: ChatThread[]
+  conversations: ChatConversation[]
 }) {
   const params = useParams();
-  const graph = params.graph as string;
+  const agent = params.agent as string;
 
   return (
     <Sidebar>
       <SidebarHeader>
-        <GraphSwitch graphs={graphs} active={graph}/>
+        <AgentSwitch agents={agents} active={agent}/>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <Link href={`/chat/${graph}`}>
+                <Link href={`/chat/${agent}`}>
                   <PlusIcon />
                   <span>{'发起新对话'}</span>
                 </Link>
@@ -53,11 +53,11 @@ export function ChatSidebar({ graphs, owner, threads }: {
         <SidebarGroup>
           <SidebarGroupLabel>{'对话历史'}</SidebarGroupLabel>
           <SidebarMenu>
-            {threads.map((thread) => (
-              <SidebarMenuItem key={thread.thread_id}>
+            {conversations.map((conversation) => (
+              <SidebarMenuItem key={conversation.conversation_id}>
                 <SidebarMenuButton asChild>
-                  <Link href={`/chat/${graph}/${thread.thread_id}`}>
-                    <span>{thread.summary}</span>
+                  <Link href={`/chat/${agent}/${conversation.conversation_id}`}>
+                    <span>{conversation.summary}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

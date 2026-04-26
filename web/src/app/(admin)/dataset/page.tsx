@@ -23,12 +23,12 @@ import { Input } from '@/components/ui/input';
 import { AddDatasetDialog } from '@/components/dataset/add-dataset';
 import { DeleteDatasetDialog } from '@/components/dataset/delete-dataset';
 
-import { useColList } from '@/hooks/use-dataset';
+import { useDatasetList } from '@/hooks/use-dataset';
 
 
 export default function DatasetPage() {
 
-  const { data: datasets, isLoading } = useColList();
+  const { data: datasets, isLoading } = useDatasetList();
   
   const [ search, setSearch ] = useState('');
 

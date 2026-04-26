@@ -17,14 +17,14 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 
-import { useColAction } from '@/hooks/use-dataset';
+import { useDatasetAction } from '@/hooks/use-dataset';
 
 
 export function DeleteDatasetDialog({ name }: {
   name: string
 }) {
 
-  const { remove, refresh } = useColAction();
+  const { remove, refresh } = useDatasetAction();
 
   const [ open, setOpen ] = useState(false);
 

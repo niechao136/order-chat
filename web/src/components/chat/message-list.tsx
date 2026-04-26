@@ -26,7 +26,7 @@ export function MsgList({ messages }: { messages: ChatMessage[] }) {
       <div className="max-w-3xl mx-auto flex flex-col pb-32 pt-4">
         {messages.map((msg) => (
           <MessageItem
-            key={msg.id}
+            key={msg.message_id}
             role={msg.role}
             content={msg.content}
           />

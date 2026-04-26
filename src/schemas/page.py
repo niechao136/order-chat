@@ -23,15 +23,10 @@ class PageParams(BaseModel):
 T = TypeVar("T")
 
 class PageResult(BaseModel, Generic[T]):
-    total: int = Field(..., description="总记录数")
-    data: List[T] = Field(..., description="当前页数据列表")
-    page: int
-    size: int
-
-
-class NoPageResult(BaseModel, Generic[T]):
-    total: int = Field(..., description="总记录数")
-    data: List[T] = Field(..., description="当前页数据列表")
+    total: int = Field(..., description="总数据数")
+    data: List[T] = Field(..., description="当前页的数据列表")
+    page: int = Field(..., description="当前页数")
+    size: int = Field(..., description="每页数据数量")
 
 
 class DataResult(BaseModel, Generic[T]):

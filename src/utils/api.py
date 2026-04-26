@@ -20,7 +20,8 @@ async def update_usage(
         pool
 ):
     endpoint = request.url.path
-    ip_address = request.client.host if request.client else "unknown"
+    client = request.client if request.client else None
+    ip_address = client.host if client else "unknown"
     user_agent = request.headers.get("User-Agent", "")
     try:
         async with pool.connection() as conn:
@@ -75,7 +76,7 @@ async def get_api_key(
                 """)
         rows = await cur.fetchall()
 
-    valid_row = None
+    valid_row: dict | None = None
     for row in rows:
         if verify_api_key(api_key, row["key_hash"]):
             valid_row = row

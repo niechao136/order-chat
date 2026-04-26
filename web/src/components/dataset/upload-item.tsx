@@ -5,7 +5,7 @@ import { useState, useRef, ChangeEvent } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { useRecordField, useRecordActions } from '@/hooks/use-dataset';
+import { usePointActions, usePointField } from '@/hooks/use-dataset';
 import { FieldItem } from '@/types/dataset';
 import { readExcelFile } from '@/utils/excel';
 
@@ -80,15 +80,15 @@ function parseExcelData(
 }
 
 
-export function UploadItem({ collection }: {
-  collection: string
+export function UploadItem({ dataset }: {
+  dataset: string
 }) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isParsing, setIsParsing] = useState(false);
 
-  const { upload, jumpToLast } = useRecordActions(collection);
-  const { data: fields, isLoading: fieldsLoading } = useRecordField(collection);
+  const { upload, jumpToLast } = usePointActions(dataset);
+  const { data: fields, isLoading: fieldsLoading } = usePointField(dataset);
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -5,16 +5,16 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { useRecordActions, useRecordField } from '@/hooks/use-dataset';
+import { usePointActions, usePointField } from '@/hooks/use-dataset';
 import { downloadExcelFile } from '@/utils/excel';
-import { RecordInfo } from '@/types/dataset';
+import { PointInfo } from '@/types/dataset';
 
 
-export function ExportAllButton({ collection }: {
-  collection: string;
+export function ExportAllButton({ dataset }: {
+  dataset: string;
 }) {
-  const { data: fields, isLoading: fieldsLoading } = useRecordField(collection);
-  const { exportAll } = useRecordActions(collection);
+  const { data: fields, isLoading: fieldsLoading } = usePointField(dataset);
+  const { exportAll } = usePointActions(dataset);
   const { mutate, isPending } = exportAll;
 
   const handleExport = useCallback(() => {
@@ -37,7 +37,7 @@ export function ExportAllButton({ collection }: {
           const customFields = fields.filter(f => f.field_name !== 'updated_at');
           const headerRow = ['content', ...customFields.map(f => f.field_name)];
 
-          const dataRows = records.map((record: RecordInfo) => {
+          const dataRows = records.map((record: PointInfo) => {
             const payload = record.payload || {};
             return [
               payload.content || '',
@@ -46,7 +46,7 @@ export function ExportAllButton({ collection }: {
           });
 
           const sheetData = [headerRow, ...dataRows];
-          downloadExcelFile(sheetData, `${collection}_全部数据.xlsx`, '数据集');
+          downloadExcelFile(sheetData, `${dataset}_全部数据.xlsx`, '数据集');
 
           toast.success(`成功导出 ${records.length} 条记录`);
         } catch (error) {
@@ -58,7 +58,7 @@ export function ExportAllButton({ collection }: {
         toast.error(`导出失败: ${error.message}`);
       },
     });
-  }, [fields, mutate, collection]);
+  }, [fields, mutate, dataset]);
 
   return (
     <Button

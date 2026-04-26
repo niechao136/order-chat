@@ -10,7 +10,7 @@ from src.database.postgre import get_db_pool
 from src.dataset.embedding import get_embedding_async, get_embeddings_async_batch
 from src.dataset.qdrant import get_qdrant_client_async
 from src.schemas.dataset import AddDatasetRequest, AddPointRequest, DeletePointsRequest, FieldItem, GetPointsRequest, SearchPointRequest, UpdatePointRequest
-from src.schemas.page import NoPageResult, DataResult, PageResult, PageParams
+from src.schemas.page import DataResult, PageResult, PageParams
 from src.utils.auth import get_admin_entity, get_chat_entity
 from src.utils.dataset import check_dataset, validate_and_fill_metadata, build_qdrant_filter, get_qdrant_index_params
 from src.utils.uuid import generate_timestamp_uuid
@@ -24,7 +24,7 @@ dataset_router = APIRouter(
 
 @dataset_router.get(
     path="",
-    response_model=NoPageResult[models.CollectionDescription],
+    response_model=DataResult[List[models.CollectionDescription]],
     summary="获取知识库列表",
     description="查询向量数据库中所有已存在的集合（Collection）列表。"
 )
@@ -37,7 +37,7 @@ async def get_dataset_list(
     """
     rows = await client.get_collections()
     data = rows.collections
-    return NoPageResult(total=len(data), data=data)
+    return DataResult(status=1, data=data)
 
 
 @dataset_router.post(
@@ -222,7 +222,7 @@ async def add_point(
 
 @dataset_router.get(
     path="/{dataset_name}/all",
-    response_model=NoPageResult[models.Record],
+    response_model=DataResult[List[models.Record]],
     summary="获取指定知识库内所有向量数据",
     description="获取指定知识库内所有向量数据。用于向量数据全部导出。"
 )
@@ -251,12 +251,12 @@ async def get_all_points(
             break
         offset = next_offset
 
-    return NoPageResult(data=all_records, total=len(all_records))
+    return DataResult(data=all_records, status=1)
 
 
 @dataset_router.post(
     path="/{dataset_name}/batch",
-    response_model=NoPageResult[models.Record],
+    response_model=DataResult[List[models.Record]],
     summary="获取指定 ID 数组对应的向量数据",
     description="接收向量 ID 数组，获取它们的数据详情，用于导出选中的向量数据。"
 )
@@ -269,7 +269,7 @@ async def get_points_by_ids(
     await check_dataset(client, dataset_name)
 
     if not body.ids:
-        return NoPageResult(data=[], total=0)
+        return DataResult(data=[], status=1)
 
     records = await client.retrieve(
         collection_name=dataset_name,
@@ -279,9 +279,9 @@ async def get_points_by_ids(
     )
 
     if not records:
-        return NoPageResult(data=[], total=0)
+        return DataResult(data=[], status=1)
 
-    return NoPageResult(data=records, total=len(records))
+    return DataResult(data=records, status=1)
 
 
 @dataset_router.post(
@@ -432,7 +432,7 @@ async def clear_dataset(
 
 @dataset_router.post(
     path="/{dataset_name}/search",
-    response_model=NoPageResult[models.ScoredPoint],
+    response_model=DataResult[List[models.ScoredPoint]],
     summary="向量检索（相似度搜索）",
     description="根据输入的文本进行语义搜索。支持通过 filters 字段进行元数据过滤（例如：只搜索特定类型的向量）。"
 )
@@ -461,7 +461,7 @@ async def search_item(
         with_payload=True,
         query_filter=filter_obj
     )
-    return NoPageResult(total=len(rows.points), data=rows.points)
+    return DataResult(status=1, data=rows.points)
 
 
 @dataset_router.get(

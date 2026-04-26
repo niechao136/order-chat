@@ -17,14 +17,14 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 
-import { useRecordActions } from '@/hooks/use-dataset';
+import { usePointActions } from '@/hooks/use-dataset';
 
 
-export function ClearDatasetDialog({ collection }: {
-  collection: string
+export function ClearDatasetDialog({ dataset }: {
+  dataset: string
 }) {
 
-  const { clear, checkPage } = useRecordActions(collection);
+  const { clear, checkPage } = usePointActions(dataset);
 
   const [ open, setOpen ] = useState(false);
 
@@ -32,7 +32,7 @@ export function ClearDatasetDialog({ collection }: {
     clear.mutate(undefined, {
       onSuccess: async () => {
         await checkPage();
-        toast.success(`知识库 ${collection} 清空成功`);
+        toast.success(`知识库 ${dataset} 清空成功`);
         setOpen(false);
       },
       onError: (err: Error) => {
@@ -53,7 +53,7 @@ export function ClearDatasetDialog({ collection }: {
           <AlertDialogTitle>确定要清空知识库吗？</AlertDialogTitle>
           <AlertDialogDescription>
             此操作将永久删除知识库 <span
-            className="font-bold text-foreground">{collection}</span> 包含的所有向量数据，不可撤销。
+            className="font-bold text-foreground">{dataset}</span> 包含的所有向量数据，不可撤销。
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -13,39 +13,39 @@ import { ChatConfig } from '@/components/chat/chat-config';
 
 import { useChatAction } from '@/hooks/use-chat';
 import { useChatStore } from '@/stores/chat';
-import { GraphConfig } from '@/types/chat';
+import { AgentConfig } from '@/types/chat';
 
 interface ChatInputProp {
-  graph: string;
+  agent: string;
   start: boolean;
-  config: GraphConfig;
-  collections: string[];
+  config: AgentConfig;
+  datasets: string[];
 }
 
 export function ChatInput({
-  graph,
+  agent,
   start,
   config,
-  collections,
+  datasets,
 }: ChatInputProp) {
   const router = useRouter();
 
-  const threadId = useChatStore((s) => s.threadId);
+  const conversationId = useChatStore((s) => s.conversationId);
   const appendStreamingContent = useChatStore((s) => s.appendStreamingContent);
   const setStreamingContent = useChatStore((s) => s.setStreamingContent);
   const setIsStreaming = useChatStore((s) => s.setIsStreaming);
-  const setThreadId = useChatStore((s) => s.setThreadId);
-  const setPendingThreadId = useChatStore((s) => s.setPendingThreadId);
+  const setConversationId = useChatStore((s) => s.setConversationId);
+  const setPendingConversationId = useChatStore((s) => s.setPendingConversationId);
 
   const [input, setInput] = useState('');
   const [lang, setLang] = useState(config.lang);
-  const [collection, setCollection] = useState(config.collection_name);
+  const [dataset, setDataset] = useState(config.dataset);
 
-  const { sendMsg } = useChatAction(graph);
+  const { sendMsg } = useChatAction(agent);
 
-  const setConfig = (lang: string, collection_name: string) => {
+  const setConfig = (lang: string, dataset: string) => {
     setLang(lang);
-    setCollection(collection_name);
+    setDataset(dataset);
   };
 
   const handleStartChat = async () => {
@@ -58,11 +58,11 @@ export function ChatInput({
 
     sendMsg.mutate({
       req: {
-        graph,
-        thread_id: threadId,
-        message: content,
+        agent,
+        conversation_id: conversationId,
+        query: content,
         lang,
-        collection_name: collection,
+        dataset,
       },
       onChunk: (chunk: string) => {
         appendStreamingContent(chunk);
@@ -70,24 +70,24 @@ export function ChatInput({
       onError: () => {
         setInput(content);
         if (start) {
-          setThreadId(null);
-          setPendingThreadId(null);
+          setConversationId(null);
+          setPendingConversationId(null);
         }
         setIsStreaming(false);
         toast.error('消息发送失败，请检查网络连接');
       },
       onFinished: () => {
         setIsStreaming(false);
-        const pendingId = useChatStore.getState().pendingThreadId;
+        const pendingId = useChatStore.getState().pendingConversationId;
         if (start && pendingId) {
-          setThreadId(pendingId);
-          setPendingThreadId(null);
-          router.replace(`/chat/${graph}/${pendingId}`, { scroll: false });
+          setConversationId(pendingId);
+          setPendingConversationId(null);
+          router.replace(`/chat/${agent}/${pendingId}`, { scroll: false });
         }
       },
-      onThreadCreated: (newThreadId: string) => {
+      onConversationCreated: (newConversationId: string) => {
         if (start) {
-          setPendingThreadId(newThreadId);
+          setPendingConversationId(newConversationId);
         }
       },
     });
@@ -101,7 +101,7 @@ export function ChatInput({
         <Textarea
           rows={1}
           placeholder="发送消息..."
-          className="w-full min-h-[60px] max-h-[200px] border-0 focus-visible:ring-0 resize-none pt-4 pb-12 px-4 text-base bg-transparent"
+          className="w-full min-h-15 max-h-50 border-0 focus-visible:ring-0 resize-none pt-4 pb-12 px-4 text-base bg-transparent"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={async (e) => {
@@ -128,9 +128,9 @@ export function ChatInput({
 
             {/* 配置按钮 */}
             <ChatConfig
-              collection_name={collection}
-              collections={collections}
-              disabled={!!threadId}
+              dataset={dataset}
+              datasets={datasets}
+              disabled={!!conversationId}
               lang={lang}
               setConfig={setConfig}
             />

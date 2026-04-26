@@ -1,13 +1,13 @@
 
-const REDIRECT_GRAPH = 'redirect_graph';
+const REDIRECT_AGENT = 'redirect_agent';
 
-export function saveGraph(graph: string) {
-  localStorage.setItem(REDIRECT_GRAPH, graph);
+export function saveAgent(agent: string) {
+  localStorage.setItem(REDIRECT_AGENT, agent);
 }
 
-export function checkGraph(graph_name: string[]) {
-  const redirectGraph = localStorage.getItem(REDIRECT_GRAPH)
-  const graph = graph_name.includes(redirectGraph ?? '') ? redirectGraph : graph_name[0];
-  localStorage.removeItem(REDIRECT_GRAPH);
-  return graph ?? '';
+export function checkAgent(agents: string[]) {
+  const redirectAgent = localStorage.getItem(REDIRECT_AGENT)
+  const agent = agents.includes(redirectAgent ?? '') ? redirectAgent : agents[0];
+  localStorage.removeItem(REDIRECT_AGENT);
+  return agent ?? '';
 }

@@ -37,7 +37,7 @@ import {
   TableRow
 } from '@/components/ui/table';
 
-import { useRecordField, useRecordActions } from '@/hooks/use-dataset';
+import { usePointActions, usePointField } from '@/hooks/use-dataset';
 import { FieldItem } from '@/types/dataset';
 import { PRESET_FIELDS, isPresetField } from '@/utils/dataset';
 
@@ -64,16 +64,16 @@ type FormValues = z.infer<typeof formSchema>;
 
 
 // ---------- 主组件 ----------
-export function ManageFieldsDialog({ collection, disabled }: {
-  collection: string
+export function ManageFieldsDialog({ dataset, disabled }: {
+  dataset: string
   disabled: boolean
 }) {
 
   const [ open, setOpen ] = useState(false);
 
   // 获取当前字段列表
-  const { data: fields, isLoading } = useRecordField(collection);
-  const { setField, refreshField } = useRecordActions(collection);
+  const { data: fields, isLoading } = usePointField(dataset);
+  const { setField, refreshField } = usePointActions(dataset);
 
   // 表单实例
   const {

@@ -18,7 +18,7 @@ import { SearchDataset } from '@/components/dataset/search-dataset';
 
 export default function DatasetDetailPage() {
   const params = useParams();
-  const collection = params.collection as string;
+  const dataset = params.dataset as string;
 
   const [tab, setTab] = useState('manage');
 
@@ -27,7 +27,7 @@ export default function DatasetDetailPage() {
       <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           {/* Tab 切换控制 */}
-          <TabsList className="grid w-[400px] grid-cols-2">
+          <TabsList className="grid w-100 grid-cols-2">
             <TabsTrigger value="manage" className="flex items-center gap-2">
               <ListFilterIcon className="h-4 w-4" /> 向量管理
             </TabsTrigger>
@@ -39,12 +39,12 @@ export default function DatasetDetailPage() {
 
         {/* --- Tab 1: 向量管理 --- */}
         <TabsContent value="manage" className="flex-1 flex flex-col gap-4 mt-0 mb-4">
-          <DatasetTable collection={collection}/>
+          <DatasetTable dataset={dataset}/>
         </TabsContent>
 
         {/* --- Tab 2: 召回测试 --- */}
         <TabsContent value="test" className="flex-1 mt-0">
-          <SearchDataset collection={collection}/>
+          <SearchDataset dataset={dataset}/>
         </TabsContent>
       </Tabs>
     </div>

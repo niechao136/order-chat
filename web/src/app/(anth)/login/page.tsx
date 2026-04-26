@@ -15,9 +15,9 @@ import { Field, FieldLabel, FieldGroup, FieldSet, FieldError } from '@/component
 import { Input } from '@/components/ui/input';
 
 import { useAuthAction } from '@/hooks/use-auth';
-import { useGraph } from '@/hooks/use-chat';
+import { useAgent } from '@/hooks/use-chat';
 import { saveToken } from '@/utils/cookie';
-import { checkGraph } from '@/utils/local';
+import { checkAgent } from '@/utils/local';
 
 
 // 定义表单校验规则
@@ -38,10 +38,11 @@ export default function LoginPage() {
   });
 
   const { signIn, clearCache } = useAuthAction();
-  const { data: graphs } = useGraph();
-  const graph_name = useMemo(() => {
-    return (graphs ?? []).map(o => o.name);
-  }, [graphs]);
+  const { data: agents } = useAgent();
+
+  const agent_name = useMemo(() => {
+    return (agents ?? []).map(o => o.name);
+  }, [agents]);
 
   async function onSubmit(values: FormValues) {
     const body = JSON.stringify(values);
@@ -51,14 +52,14 @@ export default function LoginPage() {
 
         await clearCache();
 
-        if (!graph_name?.[0]) {
-          toast.error('目前没有可用的 Graph');
+        if (!agent_name?.[0]) {
+          toast.error('目前没有可用的 Agent');
           return;
         }
 
-        const graph = checkGraph(graph_name);
+        const agent = checkAgent(agent_name);
 
-        router.push(`/chat/${graph}`);
+        router.push(`/chat/${agent}`);
       },
       onError: (err) => {
         toast.error(err?.message || '登录失败，请检查账号密码');

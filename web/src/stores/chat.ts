@@ -2,14 +2,14 @@ import { create } from 'zustand';
 
 
 interface ChatState {
-  threadId: string | null;
-  pendingThreadId: string | null;
+  conversationId: string | null;
+  pendingConversationId: string | null;
   isStreaming: boolean;
   streamingContent: string;
 
   // Actions
-  setThreadId: (id: string | null) => void;
-  setPendingThreadId: (id: string | null) => void;
+  setConversationId: (id: string | null) => void;
+  setPendingConversationId: (id: string | null) => void;
   setIsStreaming: (isStreaming: boolean) => void;
   setStreamingContent: (content: string) => void;
   appendStreamingContent: (chunk: string) => void;
@@ -17,13 +17,13 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>((set) => ({
-  threadId: null,
-  pendingThreadId: null,
+  conversationId: null,
+  pendingConversationId: null,
   isStreaming: false,
   streamingContent: '',
 
-  setThreadId: (id) => set({ threadId: id }),
-  setPendingThreadId: (pendingThreadId) => set({ pendingThreadId }),
+  setConversationId: (conversationId) => set({ conversationId }),
+  setPendingConversationId: (pendingConversationId) => set({ pendingConversationId }),
   setIsStreaming: (isStreaming) => set({ isStreaming }),
   setStreamingContent: (content) => set({ streamingContent: content }),
   // 专门用于流式追加的方法
@@ -31,8 +31,8 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({ streamingContent: state.streamingContent + chunk })),
 
   resetChat: () => set({
-    threadId: null,
-    pendingThreadId: null,
+    conversationId: null,
+    pendingConversationId: null,
     isStreaming: false,
     streamingContent: ''
   }),
