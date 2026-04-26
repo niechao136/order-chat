@@ -36,6 +36,7 @@ import { ToggleApiKey } from '@/components/api-key/toggle-api-key';
 import { useApiKey } from '@/hooks/use-api-key';
 import { usePagingStore } from '@/stores/paging';
 import { formatTimeStr } from '@/utils/time';
+import { copyToClipboard } from '@/utils/string';
 
 
 type SortableField = 'name' | 'is_active' | 'expires_at' | 'last_used_at' | 'created_at';
@@ -115,11 +116,16 @@ export default function ApiKeysPage() {
       .map(r => r.id)
   }, [data]);
 
-  const copyToClipboard = async (id: string, text: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(id);
-    toast.success('密钥已复制到剪贴板');
-    setTimeout(() => setCopied(''), 2000);
+  const handleCopy = async (id: string, content: string) => {
+    if (!content) return;
+    const res = await copyToClipboard(content);
+    if (res) {
+      setCopied(id);
+      toast.success('已复制到剪贴板');
+      setTimeout(() => setCopied(''), 2000);
+    } else {
+      toast.error('复制失败，请手动复制');
+    }
   };
 
   return (
@@ -245,7 +251,7 @@ export default function ApiKeysPage() {
                             size="sm"
                             className="h-8 w-8 text-muted-foreground hover:text-primary"
                             title={'复制密钥'}
-                            onClick={() => copyToClipboard(api_key.id, api_key.key)}>
+                            onClick={() => handleCopy(api_key.id, api_key.key)}>
                             {copied === api_key.id ? <CheckIcon className="h-4 w-4 text-green-500" /> : <CopyIcon className="h-4 w-4"/>}
                           </Button>
                           <DeleteApiKey info={api_key} disabled={!allowCheck.includes(api_key.id)}/>

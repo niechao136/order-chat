@@ -1,4 +1,3 @@
-
 import { PageParams } from '@/types/api'
 
 
@@ -30,4 +29,36 @@ export const getParams = (params?: PageParams) => {
    const query = new URLSearchParams(filtered).toString();
 
    return !!query ? `?${query}` : '';
+};
+
+
+export const copyToClipboard = async (text: string) => {
+  try {
+    // 优先使用现代 Clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.warn('Clipboard API 失败，尝试降级方案', err);
+  }
+
+  // 降级方案：创建临时 textarea 执行复制
+  let res = true;
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-9999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    res = document.execCommand('copy');
+  } catch (err) {
+    console.warn('document.execCommand 失败：', err);
+    res = false;
+  } finally {
+    document.body.removeChild(textArea);
+  }
+  return res;
 };

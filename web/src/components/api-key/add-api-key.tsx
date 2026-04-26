@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 import { useApiKeyAction } from '@/hooks/use-api-key';
+import { copyToClipboard } from '@/utils/string';
 
 
 // 定义表单校验逻辑
@@ -87,11 +88,16 @@ export function AddApiKey() {
     });
   };
 
-  const copyToClipboard = async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast.success('密钥已复制到剪贴板');
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async (content: string) => {
+    if (!content) return;
+    const res = await copyToClipboard(content);
+    if (res) {
+      setCopied(true);
+      toast.success('已复制到剪贴板');
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.error('复制失败，请手动复制');
+    }
   };
 
   const setWithReset = (isOpen: boolean) => {
@@ -212,7 +218,7 @@ export function AddApiKey() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => copyToClipboard(createdKey.key)}
+                      onClick={() => handleCopy(createdKey.key)}
                     >
                       {copied ? <CheckIcon className="h-4 w-4 text-green-500" /> : <CopyIcon className="h-4 w-4"/>}
                     </Button>

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MessageRole } from '@/types/chat';
+import { copyToClipboard } from '@/utils/string';
 import { toast } from 'sonner';
 
 export function MsgItem({ role, content }: {
@@ -20,14 +21,13 @@ export function MsgItem({ role, content }: {
   // 通用复制功能
   const handleCopy = async () => {
     if (!content) return;
-    try {
-      await navigator.clipboard.writeText(content);
+    const res = await copyToClipboard(content);
+    if (res) {
       setCopied(true);
       toast.success('已复制到剪贴板');
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error(err);
-      toast.error('复制失败');
+    } else {
+      toast.error('复制失败，请手动复制');
     }
   };
 
