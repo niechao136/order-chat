@@ -123,7 +123,15 @@ export function useChatAction(agent: string = '') {
         content: '' // 初始为空，由 onChunk 更新
       };
       queryClient.setQueryData<ChatMessage[]>(chatKeys.history(agent, optimisticConversationId), (old) => {
-        return [ ...(old ?? []), userMsg, aiMsg ];
+        const list = old ?? [];
+        // 检查是否已经存在 temp 消息，避免重复添加
+        const hasUserTemp = list.some(m => m.message_id === chatKeys.temp_user);
+        const hasAiTemp = list.some(m => m.message_id === chatKeys.temp_ai);
+        if (hasUserTemp || hasAiTemp) {
+          // 如果已经存在，说明可能是并发调用，直接返回原列表或更新 AI 内容为空
+          return list;
+        }
+        return [ ...list, userMsg, aiMsg ];
       });
       return { previousConversations, previousHistory, optimisticConversationId };
     },
