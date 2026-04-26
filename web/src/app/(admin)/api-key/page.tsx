@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  CheckIcon,
   CopyIcon,
   DatabaseIcon,
   SearchIcon,
@@ -58,6 +59,7 @@ export default function ApiKeysPage() {
   }), [page, size, order_by, direction, keyword]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [copied, setCopied] = useState('');
 
   const { data, isLoading } = useApiKey(params);
 
@@ -113,9 +115,11 @@ export default function ApiKeysPage() {
       .map(r => r.id)
   }, [data]);
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (id: string, text: string) => {
     await navigator.clipboard.writeText(text);
+    setCopied(id);
     toast.success('密钥已复制到剪贴板');
+    setTimeout(() => setCopied(''), 2000);
   };
 
   return (
@@ -151,7 +155,7 @@ export default function ApiKeysPage() {
             <Table className="table-fixed w-full">
               <TableHeader className="bg-muted/50 sticky top-0 z-10">
                 <TableRow>
-                  <TableHead className="w-[48px] text-center">
+                  <TableHead className="w-12 text-center">
                     <Checkbox
                       disabled={allowCheck.length === 0}
                       checked={selectedIds.length > 0 && selectedIds.length === allowCheck.length}
@@ -164,7 +168,7 @@ export default function ApiKeysPage() {
                     </div>
                   </TableHead>
                   <TableHead>密钥</TableHead>
-                  <TableHead className={`w-[140px]`}>
+                  <TableHead className={`w-35`}>
                     <div className="flex items-center">
                       状态
                     </div>
@@ -185,7 +189,7 @@ export default function ApiKeysPage() {
                     </div>
                   </TableHead>
                   <TableHead>描述</TableHead>
-                  <TableHead className="w-[140px] text-right">操作</TableHead>
+                  <TableHead className="w-35 text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -241,8 +245,8 @@ export default function ApiKeysPage() {
                             size="sm"
                             className="h-8 w-8 text-muted-foreground hover:text-primary"
                             title={'复制密钥'}
-                            onClick={() => copyToClipboard(api_key.key)}>
-                            <CopyIcon className="h-4 w-4"/>
+                            onClick={() => copyToClipboard(api_key.id, api_key.key)}>
+                            {copied === api_key.id ? <CheckIcon className="h-4 w-4 text-green-500" /> : <CopyIcon className="h-4 w-4"/>}
                           </Button>
                           <DeleteApiKey info={api_key} disabled={!allowCheck.includes(api_key.id)}/>
                         </div>

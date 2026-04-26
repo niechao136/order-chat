@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CopyIcon, EyeIcon, EyeOffIcon, KeyIcon, Loader2Icon, PlusIcon, XIcon } from 'lucide-react';
+import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon, KeyIcon, Loader2Icon, PlusIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -50,6 +50,7 @@ export function AddApiKey() {
   const [ open, setOpen ] = useState(false);
   const [ createdKey, setCreatedKey ] = useState<{ key: string; name: string } | null>(null);
   const [ showKey, setShowKey ] = useState(false);
+  const [ copied, setCopied ] = useState(false);
 
   const {
     register,
@@ -88,7 +89,9 @@ export function AddApiKey() {
 
   const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text);
+    setCopied(true);
     toast.success('密钥已复制到剪贴板');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const setWithReset = (isOpen: boolean) => {
@@ -110,7 +113,7 @@ export function AddApiKey() {
             创建密钥
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-125">
           <DialogHeader>
             <DialogTitle>创建新 API 密钥</DialogTitle>
             <DialogDescription>
@@ -211,7 +214,7 @@ export function AddApiKey() {
                       className="h-8 w-8"
                       onClick={() => copyToClipboard(createdKey.key)}
                     >
-                      <CopyIcon className="h-4 w-4"/>
+                      {copied ? <CheckIcon className="h-4 w-4 text-green-500" /> : <CopyIcon className="h-4 w-4"/>}
                     </Button>
                     <Button
                       variant="ghost"

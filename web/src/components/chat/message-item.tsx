@@ -55,7 +55,7 @@ export function MsgItem({ role, content }: {
       )}>
         {/* 消息气泡 */}
         <div className={cn(
-          "prose prose-sm max-w-none break-words px-4 py-3 shadow-sm rounded-2xl transition-all",
+          "prose prose-sm max-w-none wrap-break-word px-4 py-3 shadow-sm rounded-2xl transition-all",
           isUser
             ? "bg-primary text-primary-foreground rounded-tr-none"
             : "bg-white border text-slate-800 rounded-tl-none"
