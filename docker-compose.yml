@@ -4,6 +4,9 @@ services:
     build: .
     container_name: order-chat-backend
     env_file: .env
+    volumes:
+      # 宿主机相对路径 : 容器内路径
+      - ./models/vits-melo-tts-zh_en:/app/models/vits-melo-tts-zh_en
     networks:
       - chat-network
 

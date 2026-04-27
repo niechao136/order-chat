@@ -1,15 +1,20 @@
 'use client';
 
-import { memo, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { User, Bot, Copy, Check, Volume2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { memo, useState } from 'react';
+import remarkGfm from 'remark-gfm';
+import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
+
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+
+import { cn } from '@/lib/utils';
+import { useSpeechAction } from '@/hooks/use-speech';
+import { synthesizeSpeechStream } from '@/services/speech';
 import { MessageRole } from '@/types/chat';
-import { copyToClipboard } from '@/utils/string';
-import { toast } from 'sonner';
+import { copyToClipboard, getAudioText } from '@/utils/string';
+
 
 export function MsgItem({ role, content }: {
   role: MessageRole;
@@ -17,6 +22,8 @@ export function MsgItem({ role, content }: {
 }) {
   const isUser = role === 'user';
   const [copied, setCopied] = useState(false);
+
+  const { play } = useSpeechAction();
 
   // 通用复制功能
   const handleCopy = async () => {
@@ -31,8 +38,20 @@ export function MsgItem({ role, content }: {
     }
   };
 
-  const handlePlay = () => {
-    toast.info('语音播放功能开发中...');
+  const handlePlay = async () => {
+    const text = getAudioText(content);
+    const body = JSON.stringify({ text });
+    await synthesizeSpeechStream(body);
+    // play.mutate(body, {
+    //   onSuccess: async (url) => {
+    //     const audio = new Audio(url);
+    //     audio.onended = () => URL.revokeObjectURL(url);
+    //     await audio.play();
+    //   },
+    //   onError: (err: Error) => {
+    //     toast.error(err.message || '语音生成失败');
+    //   }
+    // });
   };
 
   return (

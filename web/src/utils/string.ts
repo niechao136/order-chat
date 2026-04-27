@@ -1,4 +1,4 @@
-import { PageParams } from '@/types/api'
+import { PageParams } from '@/types/api';
 
 
 export const getInitials = (name: string) => {
@@ -62,3 +62,14 @@ export const copyToClipboard = async (text: string) => {
   }
   return res;
 };
+
+
+export function getAudioText(text: string, key = 'AI_reply') {
+  try {
+    const obj = JSON.parse(text);
+    return obj?.[key] ?? text;
+  } catch (e) {
+    console.log(e);
+    return text;
+  }
+}

@@ -16,6 +16,12 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 WORKDIR /app
 
+# 定义模型在容器内的固定位置
+ENV TTS_MODEL_DIR="/app/models/vits-melo-tts-zh_en"
+
+# 创建一个空目录作为挂载点
+RUN mkdir -p /app/models/vits-melo-tts-zh_en
+
 # 5. 复制依赖文件
 # 注意：如果本地没有 uv.lock，去掉 --frozen
 COPY pyproject.toml uv.lock* ./

@@ -15,9 +15,11 @@ from src.api.api_key import api_key_router
 from src.api.auth import auth_router
 from src.api.chat import chat_router
 from src.api.dataset import dataset_router
+from src.api.speech import speech_router
 from src.api.user import user_router
 from src.database.postgre import init_pool, close_pool, init_db
 from src.dataset.qdrant import init_qdrant_async, close_qdrant_async
+from src.speech.tts import init_tts
 
 
 @asynccontextmanager
@@ -26,6 +28,7 @@ async def lifespan(_: FastAPI):
     await init_pool()
     await init_db()
     init_qdrant_async()
+    init_tts()
 
     yield
 
@@ -49,6 +52,7 @@ app.include_router(router=api_key_router)
 app.include_router(router=auth_router)
 app.include_router(router=chat_router)
 app.include_router(router=dataset_router)
+app.include_router(router=speech_router)
 app.include_router(router=user_router)
 
 
