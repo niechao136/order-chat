@@ -8,7 +8,7 @@ from src.utils.path import ROOT_DIR
 _tts: Optional[sherpa_onnx.OfflineTts] = None
 
 
-DEV_DIR = os.path.join(ROOT_DIR, "models", "vits-melo-tts-zh_en")
+DEV_DIR = os.path.join(ROOT_DIR, "models", "matcha-icefall-zh-en")
 MODEL_DIR = os.getenv("TTS_MODEL_DIR", DEV_DIR)
 
 
@@ -19,13 +19,13 @@ def init_tts() -> sherpa_onnx.OfflineTts:
         return _tts
 
     model_config = sherpa_onnx.OfflineTtsModelConfig(
-        vits=sherpa_onnx.OfflineTtsVitsModelConfig(
-            model=os.path.join(MODEL_DIR, "model.onnx"),
+        matcha=sherpa_onnx.OfflineTtsMatchaModelConfig(
+            acoustic_model=os.path.join(MODEL_DIR, "model-steps-3.onnx"),
+            vocoder=os.path.join(MODEL_DIR, "vocos-16khz-univ.onnx"),
             lexicon=os.path.join(MODEL_DIR, "lexicon.txt"),
             tokens=os.path.join(MODEL_DIR, "tokens.txt"),
-            data_dir="",
+            data_dir=MODEL_DIR,
             noise_scale=0.667,
-            noise_scale_w=0.8,
             length_scale=1.0,
         ),
         num_threads=1,
@@ -34,7 +34,7 @@ def init_tts() -> sherpa_onnx.OfflineTts:
     )
     tts_config = sherpa_onnx.OfflineTtsConfig(
         model=model_config,
-        rule_fsts="",
+        rule_fsts=f"{os.path.join(MODEL_DIR, 'date-zh.fst')},{os.path.join(MODEL_DIR, 'number-zh.fst')},{os.path.join(MODEL_DIR, 'phone-zh.fst')}",
         max_num_sentences=1,
     )
     tts = sherpa_onnx.OfflineTts(tts_config)

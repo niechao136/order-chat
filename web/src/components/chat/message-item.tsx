@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 
 import { cn } from '@/lib/utils';
-import { useSpeechAction } from '@/hooks/use-speech';
 import { synthesizeSpeechStream } from '@/services/speech';
 import { MessageRole } from '@/types/chat';
 import { copyToClipboard, getAudioText } from '@/utils/string';
@@ -22,8 +21,7 @@ export function MsgItem({ role, content }: {
 }) {
   const isUser = role === 'user';
   const [copied, setCopied] = useState(false);
-
-  const { play } = useSpeechAction();
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // 通用复制功能
   const handleCopy = async () => {
@@ -39,19 +37,20 @@ export function MsgItem({ role, content }: {
   };
 
   const handlePlay = async () => {
-    const text = getAudioText(content);
-    const body = JSON.stringify({ text });
-    await synthesizeSpeechStream(body);
-    // play.mutate(body, {
-    //   onSuccess: async (url) => {
-    //     const audio = new Audio(url);
-    //     audio.onended = () => URL.revokeObjectURL(url);
-    //     await audio.play();
-    //   },
-    //   onError: (err: Error) => {
-    //     toast.error(err.message || '语音生成失败');
-    //   }
-    // });
+    if (isPlaying) return;
+
+    try {
+      setIsPlaying(true);
+      const text = getAudioText(content);
+      const body = JSON.stringify({ text });
+      await synthesizeSpeechStream(body);
+    } catch (error) {
+      console.error("播放失败:", error);
+      toast.error("播放失败");
+    } finally {
+      // 无论成功还是失败，播放结束后重置状态
+      setIsPlaying(false);
+    }
   };
 
   return (
@@ -88,7 +87,8 @@ export function MsgItem({ role, content }: {
         {content && (
           <div className={cn(
             "flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity",
-            isUser ? "flex-row-reverse mr-1" : "ml-1"
+            isUser ? "flex-row-reverse mr-1" : "ml-1",
+            (isPlaying || copied) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           )}>
             {/* 复制按钮 (用户和 AI 都有) */}
             <Button
@@ -106,9 +106,14 @@ export function MsgItem({ role, content }: {
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-slate-400 hover:text-primary transition-colors"
+                disabled={isPlaying}
                 onClick={handlePlay}
               >
-                <Volume2 size={14} />
+                {isPlaying ? (
+                  <Volume2 size={14} className="animate-pulse text-green-500"/>
+                ) : (
+                  <Volume2 size={14}/>
+                )}
               </Button>
             )}
           </div>

@@ -6,7 +6,7 @@ services:
     env_file: .env
     volumes:
       # 宿主机相对路径 : 容器内路径
-      - ./models/vits-melo-tts-zh_en:/app/models/vits-melo-tts-zh_en
+      - ./models/matcha-icefall-zh-en:/app/models/matcha-icefall-zh-en
     networks:
       - chat-network
 

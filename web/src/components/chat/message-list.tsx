@@ -6,23 +6,30 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatMessage } from '@/types/chat';
 
 export function MsgList({ messages }: { messages: ChatMessage[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  // 只要消息列表长度或内容发生变化，就滚动到底部
+  // 封装统一的滚动到底部函数
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    bottomRef.current?.scrollIntoView({ behavior: behavior });
+  };
+
+  // 1. 处理初始化进入页面时的自动滚动
+  // 依赖 history 数据加载完成的时机 (第一次 messages 长度大于 0 时)
   useEffect(() => {
-    if (scrollRef.current) {
-      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTo({
-          top: scrollContainer.scrollHeight,
-          behavior: 'smooth'
-        });
-      }
+    if (messages.length > 0) {
+      // 初始化跳转建议用 'instant' 或 'auto'，不要 smooth，否则页面加载时会有闪烁感
+      setTimeout(() => scrollToBottom('auto'), 100); 
     }
+  }, [messages.length]);
+
+  // 2. 处理消息内容变化（包括流式输出）时的滚动
+  useEffect(() => {
+    // 如果正在打字机输出或者有新消息，平滑滚动到底部
+    scrollToBottom('smooth');
   }, [messages]);
 
   return (
-    <ScrollArea ref={scrollRef} className="flex-1 w-full">
+    <ScrollArea className="flex-1 w-full">
       <div className="max-w-3xl mx-auto flex flex-col pb-32 pt-4">
         {messages.map((msg) => (
           <MessageItem
@@ -36,6 +43,7 @@ export function MsgList({ messages }: { messages: ChatMessage[] }) {
             暂无消息，开始对话吧...
           </div>
         )}
+        <div ref={bottomRef} className="h-px w-full" />
       </div>
     </ScrollArea>
   );
