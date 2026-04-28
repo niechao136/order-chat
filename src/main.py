@@ -19,6 +19,7 @@ from src.api.speech import speech_router
 from src.api.user import user_router
 from src.database.postgre import init_pool, close_pool, init_db
 from src.dataset.qdrant import init_qdrant_async, close_qdrant_async
+from src.speech.asr import init_sense
 from src.speech.tts import init_tts
 
 
@@ -29,6 +30,7 @@ async def lifespan(_: FastAPI):
     await init_db()
     init_qdrant_async()
     init_tts()
+    init_sense()
 
     yield
 

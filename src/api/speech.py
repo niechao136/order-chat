@@ -2,15 +2,17 @@ import io
 import numpy as np
 import sherpa_onnx
 import threading
+import time
 import wave
-from fastapi import APIRouter, Depends, HTTPException, Body, Response
+from fastapi import APIRouter, Depends, HTTPException, Body, Response, UploadFile, File
 from fastapi.responses import StreamingResponse
 from typing import Annotated
 
-from src.schemas.speech import TTSRequest
+from src.schemas.speech import ASREntity, TTSRequest
+from src.speech.asr import init_sense
 from src.speech.tts import init_tts
 from src.utils.auth import get_chat_entity
-from src.utils.speech import pcm_callback_generator
+from src.utils.speech import load_audio, pcm_callback_generator
 
 
 _tts_lock = threading.Lock()
@@ -127,3 +129,54 @@ async def synthesize_stream(
             "Access-Control-Expose-Headers": "X-Sample-Rate, X-Channels, X-Bits-Per-Sample",
         }
     )
+
+
+@speech_router.post(
+    path="/asr",
+    summary="语音转文字 (ASR)",
+    description="上传音频文件（支持 webm/wav/mp3 等），使用 SenseVoiceSmall 模型进行高精度识别，支持中英日韩多语种及情感识别。",
+    response_model=ASREntity
+)
+async def speech_to_text(
+        file: UploadFile = File(..., description="录音音频文件")
+):
+    # 1. 读取文件
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="音频文件为空")
+
+    # 2. 初始化识别器
+    recognizer = init_sense()
+
+    try:
+        # 3. 将上传的文件转换为模型需要的采样率 (SenseVoice 通常需要 16kHz)
+        # 注意：这里建议使用 ffmpeg 或 librosa 进行预处理，
+        # 如果前端直接发送的是 16kHz 的 wav 字节流，可以直接用下面的逻辑：
+        stream = recognizer.create_stream()
+
+        # 这里的处理逻辑取决于你是否在后端进行重采样
+        # 简化版示例（假设已处理为单声道 16k 采样率的 samples）:
+        samples = load_audio(content)
+
+        stream.accept_waveform(16000, samples)
+
+        # 4. 执行识别
+        start_time = time.time()
+        # 注意：sherpa-onnx 的 OfflineRecognizer 直接读取字节流可能需要 decode
+        # 下面展示标准的识别流程：
+        result = recognizer.decode_stream(stream)  # 某些版本支持直接 decode buffer
+
+        # 5. 格式化结果
+        # SenseVoice 的结果通常带有 <|zh|><|HAPPY|> 等标签
+        raw_text = result[0].text
+        # 过滤掉标签获取纯文本（正则或简单替换）
+        clean_text = raw_text.split(">")[-1].strip()
+
+        return ASREntity(
+            text=clean_text,
+            raw_text=raw_text,
+            duration=round(time.time() - start_time, 2)
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"识别失败: {str(e)}")

@@ -1,4 +1,5 @@
 import { apiRequest, getBaseUrl } from '@/services/api';
+import { AsrRes } from '@/types/speech';
 import { getToken } from '@/utils/cookie';
 
 
@@ -104,4 +105,13 @@ export async function synthesizeSpeechStream(body: string) {
   }
   await audioCtx.close();
 
+}
+
+export async function recognizeSpeech(body: FormData) {
+  const res = await apiRequest(`speech/asr`, {
+    method: 'POST',
+    body,
+  });
+  const data: AsrRes = await res.json();
+  return data;
 }

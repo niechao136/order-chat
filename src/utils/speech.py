@@ -1,7 +1,10 @@
 import asyncio
 import numpy as np
+import io
 import queue
 import threading
+from fastapi import HTTPException
+from pydub import AudioSegment
 
 
 async def pcm_callback_generator(tts, text: str, sid: int):
@@ -43,3 +46,21 @@ async def pcm_callback_generator(tts, text: str, sid: int):
         if isinstance(chunk, Exception):
             raise chunk
         yield chunk
+
+
+def load_audio(content: bytes):
+    try:
+        # 1. 使用 pydub 读取任意格式的音频流
+        audio = AudioSegment.from_file(io.BytesIO(content))
+
+        # 2. 强制转换为模型要求的格式：16000Hz, 单声道
+        audio = audio.set_frame_rate(16000).set_channels(1)
+
+        # 3. 将采样数据转换为 float32 数组
+        # pydub 默认是 int16，所以除以 32768.0 进行归一化
+        samples = np.array(audio.get_array_of_samples()).astype(np.float32) / 32768.0
+
+        return samples
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"转换失败: {str(e)}")

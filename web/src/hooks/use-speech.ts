@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { synthesizeSpeech } from '@/services/speech';
+import { recognizeSpeech, synthesizeSpeech } from '@/services/speech';
 
 
 export function useSpeechAction() {
@@ -9,8 +9,13 @@ export function useSpeechAction() {
     mutationFn: synthesizeSpeech,
   });
 
+  const recognize = useMutation({
+    mutationFn: recognizeSpeech,
+  });
+
   return {
     play,
+    recognize,
   };
 
 }
