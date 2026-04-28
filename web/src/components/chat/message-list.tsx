@@ -13,16 +13,6 @@ export function MsgList({ messages }: { messages: ChatMessage[] }) {
     bottomRef.current?.scrollIntoView({ behavior: behavior });
   };
 
-  // 1. 处理初始化进入页面时的自动滚动
-  // 依赖 history 数据加载完成的时机 (第一次 messages 长度大于 0 时)
-  useEffect(() => {
-    if (messages.length > 0) {
-      // 初始化跳转建议用 'instant' 或 'auto'，不要 smooth，否则页面加载时会有闪烁感
-      setTimeout(() => scrollToBottom('auto'), 100); 
-    }
-  }, [messages.length]);
-
-  // 2. 处理消息内容变化（包括流式输出）时的滚动
   useEffect(() => {
     // 如果正在打字机输出或者有新消息，平滑滚动到底部
     scrollToBottom('smooth');
