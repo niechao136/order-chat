@@ -7,6 +7,7 @@ ENV PATH="/usr/local/bin:${PATH}"
 
 # 3. 安装必要工具
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
