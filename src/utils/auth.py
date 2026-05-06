@@ -12,6 +12,7 @@ from src.utils.jwt import verify_access_token
 ALLOW_ROLE: List[UserRole] = [UserRole.ADMIN]
 ANON_COOKIE_NAME = "chat_anon_id"
 ALLOWED_ORIGIN = [
+    "https://niechao.duckdns.org",
     "http://150.109.15.178:10092",
     "http://localhost:3000"
 ]
@@ -119,7 +120,9 @@ async def get_chat_entity(
 
     origin = request.headers.get("origin") or request.headers.get("referer")
 
-    if not any(origin and origin.startswith(net) for net in ALLOWED_ORIGIN):
+    is_allowed = any(origin and origin.startswith(net) for net in ALLOWED_ORIGIN)
+
+    if not is_allowed:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Need token or API key"
