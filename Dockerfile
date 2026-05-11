@@ -20,10 +20,12 @@ WORKDIR /app
 # 定义模型在容器内的固定位置
 ENV TTS_MODEL_DIR="/app/models/matcha-icefall-zh-en"
 ENV SENSE_DIR="/app/models/sensevoice-small-onnx-quant"
+ENV ONLINE_DIR="/app/models/speech_paraformer"
 
 # 创建一个空目录作为挂载点
 RUN mkdir -p /app/models/matcha-icefall-zh-en
 RUN mkdir -p /app/models/sensevoice-small-onnx-quant
+RUN mkdir -p /app/models/speech_paraformer
 
 # 5. 复制依赖文件
 # 注意：如果本地没有 uv.lock，去掉 --frozen

@@ -8,6 +8,7 @@ services:
       # 宿主机相对路径 : 容器内路径
       - ./models/matcha-icefall-zh-en:/app/models/matcha-icefall-zh-en
       - ./models/sensevoice-small-onnx-quant:/app/models/sensevoice-small-onnx-quant
+      - ./models/speech_paraformer:/app/models/speech_paraformer
     networks:
       - chat-network
 

@@ -9,6 +9,7 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 
 
 from src.api.api_key import api_key_router
@@ -19,7 +20,7 @@ from src.api.speech import speech_router
 from src.api.user import user_router
 from src.database.postgre import init_pool, close_pool, init_db
 from src.dataset.qdrant import init_qdrant_async, close_qdrant_async
-from src.speech.asr import init_sense
+from src.speech.asr import init_sense, init_online
 from src.speech.tts import init_tts
 
 
@@ -31,6 +32,7 @@ async def lifespan(_: FastAPI):
     init_qdrant_async()
     init_tts()
     init_sense()
+    init_online()
 
     yield
 
@@ -56,6 +58,38 @@ app.include_router(router=chat_router)
 app.include_router(router=dataset_router)
 app.include_router(router=speech_router)
 app.include_router(router=user_router)
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    # 获取基础的 OpenAPI 字典
+    openapi_schema = get_openapi(
+        title="Custom API",
+        version="1.0.0",
+        description="包含了 WebSocket 接口的自定义文档",
+        routes=app.routes,
+    )
+
+    # 手动添加 WebSocket 接口描述
+    openapi_schema["paths"]["/api/speech/asr-stream"] = {
+        "get": {
+            "summary": "语音流式识别 (WebSocket)",
+            "description": "通过 WebSocket 发送 PCM 16bit 16k 音频流，并实时获取识别结果。",
+            "tags": ["Speech 语音模块"],
+            "responses": {
+                "101": {
+                    "description": "Switching Protocols (WebSocket 握手成功)"
+                }
+            },
+        }
+    }
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 
 def patch_windows_loop():

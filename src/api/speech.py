@@ -4,12 +4,12 @@ import sherpa_onnx
 import threading
 import time
 import wave
-from fastapi import APIRouter, Depends, HTTPException, Body, Response, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Body, Response, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from typing import Annotated
 
 from src.schemas.speech import ASREntity, TTSRequest
-from src.speech.asr import init_sense
+from src.speech.asr import init_sense, init_online
 from src.speech.tts import init_tts
 from src.utils.auth import get_chat_entity
 from src.utils.speech import load_audio, pcm_callback_generator
@@ -180,3 +180,52 @@ async def speech_to_text(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"识别失败: {str(e)}")
+
+
+@speech_router.websocket(
+    path="/asr-stream"
+)
+async def speech_to_text_stream(websocket: WebSocket):
+    await websocket.accept()
+
+    recognizer = init_online()
+    stream = recognizer.create_stream()
+
+    last_text = ""
+
+    try:
+        while True:
+            # 1. 接收前端传来的二进制音频数据 (建议是 PCM 16bit 16k)
+            data = await websocket.receive_bytes()
+
+            # 2. 转换数据格式为 float32
+            samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
+
+            # 3. 喂入流式识别器
+            stream.accept_waveform(16000, samples)
+
+            # 4. 循环解码直到没有数据
+            while recognizer.is_ready(stream):
+                recognizer.decode_stream(stream)
+
+            # 5. 获取当前最新文字结果
+            current_text = stream.result.text
+
+            # 6. 如果结果有更新，推送到前端
+            if current_text and current_text != last_text:
+                # 只有文字变化才推送，减少带宽压力
+                await websocket.send_json({
+                    "text": current_text,
+                    "is_final": recognizer.is_endpoint(stream)  # 是否检测到停顿（一句话结束）
+                })
+                last_text = current_text
+
+                # 如果检测到一句话结束，可以重置流或标记
+                if recognizer.is_endpoint(stream):
+                    recognizer.reset(stream)
+                    last_text = ""
+
+    except WebSocketDisconnect:
+        print("Client disconnected")
+    except Exception as e:
+        print(f"Error: {e}")
