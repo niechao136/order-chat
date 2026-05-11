@@ -11,15 +11,14 @@ from typing import Annotated
 from src.schemas.speech import ASREntity, TTSRequest
 from src.speech.asr import init_sense, init_online
 from src.speech.tts import init_tts
-from src.utils.auth import get_chat_entity
+from src.utils.auth import get_chat_entity, get_chat_websocket
 from src.utils.speech import load_audio, pcm_callback_generator
 
 
 _tts_lock = threading.Lock()
 speech_router = APIRouter(
     prefix="/speech",
-    tags=["Speech 语音模块"],
-    dependencies=[Depends(get_chat_entity)]
+    tags=["Speech 语音模块"]
 )
 
 
@@ -49,7 +48,8 @@ speech_router = APIRouter(
 )
 async def synthesize(
         body: Annotated[TTSRequest, Body(description="请求参数")],
-        tts: sherpa_onnx.OfflineTts = Depends(init_tts)
+        tts: sherpa_onnx.OfflineTts = Depends(init_tts),
+        _ = Depends(get_chat_entity),
 ):
     """
     将文本转换为语音，直接返回 WAV 音频文件
@@ -112,7 +112,8 @@ async def synthesize(
 )
 async def synthesize_stream(
         body: Annotated[TTSRequest, Body(description="请求参数")],
-        tts: sherpa_onnx.OfflineTts = Depends(init_tts)
+        tts: sherpa_onnx.OfflineTts = Depends(init_tts),
+        _ = Depends(get_chat_entity),
 ):
     """
     将文本转换为语音，使用边合成边输出的 Callback 机制，以 StreamingResponse
@@ -138,7 +139,8 @@ async def synthesize_stream(
     response_model=ASREntity
 )
 async def speech_to_text(
-        file: UploadFile = File(..., description="录音音频文件")
+        file: UploadFile = File(..., description="录音音频文件"),
+        _ = Depends(get_chat_entity),
 ):
     # 1. 读取文件
     content = await file.read()
@@ -185,7 +187,10 @@ async def speech_to_text(
 @speech_router.websocket(
     path="/asr-stream"
 )
-async def speech_to_text_stream(websocket: WebSocket):
+async def speech_to_text_stream(
+        websocket: WebSocket,
+        _ = Depends(get_chat_websocket),
+):
     await websocket.accept()
 
     recognizer = init_online()

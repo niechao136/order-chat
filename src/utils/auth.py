@@ -102,9 +102,8 @@ async def get_admin_entity(
 
 
 async def get_chat_entity(
-        request: Optional[Request],
-        response: Optional[Response],
-        websocket: Optional[WebSocket],
+        request: Request,
+        response: Response,
         token: Optional[TokenDict] = Depends(get_optional_current_user),
         pool=Depends(get_db_pool)
 ) -> str:
@@ -112,21 +111,13 @@ async def get_chat_entity(
     if token:
         return f"user_{token.id}"
 
-    connection = request or websocket
-
-    if not connection:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Must be Http or Websocket"
-        )
-
     try:
-        key_info = await get_api_key(connection, pool)
+        key_info = await get_api_key(request, pool)
         return f"api_key_{key_info.key_id}"
     except HTTPException:
         pass
 
-    origin = connection.headers.get("origin") or connection.headers.get("referer")
+    origin = request.headers.get("origin") or request.headers.get("referer")
 
     is_allowed = any(origin and origin.startswith(net) for net in ALLOWED_ORIGIN)
 
@@ -136,8 +127,8 @@ async def get_chat_entity(
             detail="Need token or API key"
         )
 
-    anon_id = connection.cookies.get(ANON_COOKIE_NAME)
-    if response and not anon_id:
+    anon_id = request.cookies.get(ANON_COOKIE_NAME)
+    if not anon_id:
         anon_id = uuid.uuid4().__str__()
         response.set_cookie(
             key=ANON_COOKIE_NAME,
@@ -146,6 +137,39 @@ async def get_chat_entity(
             httponly=True,
             samesite="lax"
         )
+    return f"anon_{anon_id}"
+
+
+async def get_chat_websocket(
+        websocket: WebSocket,
+        pool=Depends(get_db_pool)
+) -> str:
+    # 1. JWT 优先
+    authorization = websocket.headers.get("Authorization")
+    token = await get_optional_current_user(authorization)
+    if token:
+        return f"user_{token.id}"
+
+    try:
+        key_info = await get_api_key(websocket, pool)
+        return f"api_key_{key_info.key_id}"
+    except HTTPException:
+        pass
+
+    origin = websocket.headers.get("origin") or websocket.headers.get("referer")
+
+    is_allowed = any(origin and origin.startswith(net) for net in ALLOWED_ORIGIN)
+
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Need token or API key"
+        )
+
+    anon_id = websocket.cookies.get(ANON_COOKIE_NAME)
+    if not anon_id:
+        anon_id = uuid.uuid4().__str__()
+
     return f"anon_{anon_id}"
 
 
