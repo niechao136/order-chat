@@ -1,7 +1,7 @@
 import asyncio
 import json
 from datetime import datetime, timezone
-from fastapi import Request, HTTPException, status
+from fastapi import Request, HTTPException, status, WebSocket
 from uuid import UUID
 
 from src.schemas.auth import ApiKeyEntry
@@ -16,7 +16,7 @@ def hand_id(obj):
 
 async def update_usage(
         key_id: UUID,
-        request: Request,
+        request: Request | WebSocket,
         pool
 ):
     endpoint = request.url.path
@@ -41,9 +41,10 @@ async def update_usage(
 
 
 async def get_api_key(
-    request: Request,
-    pool
+        request: Request | WebSocket,
+        pool
 ) -> ApiKeyEntry:
+
     api_key = request.headers.get("X-API-Key")
     if not api_key:
         auth_header = request.headers.get("Authorization")

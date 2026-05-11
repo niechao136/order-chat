@@ -1,5 +1,5 @@
 import uuid
-from fastapi import Request, Response, HTTPException, Depends, Header, status
+from fastapi import Request, Response, HTTPException, Depends, Header, status, WebSocket
 from pydantic import ValidationError
 from typing import Annotated, Optional, List
 
@@ -102,8 +102,9 @@ async def get_admin_entity(
 
 
 async def get_chat_entity(
-        request: Request,
-        response: Response,
+        request: Optional[Request],
+        response: Optional[Response],
+        websocket: Optional[WebSocket],
         token: Optional[TokenDict] = Depends(get_optional_current_user),
         pool=Depends(get_db_pool)
 ) -> str:
@@ -111,14 +112,21 @@ async def get_chat_entity(
     if token:
         return f"user_{token.id}"
 
-    # 2. 尝试 API Key
+    connection = request or websocket
+
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Must be Http or Websocket"
+        )
+
     try:
-        key_info = await get_api_key(request, pool)
+        key_info = await get_api_key(connection, pool)
         return f"api_key_{key_info.key_id}"
     except HTTPException:
         pass
 
-    origin = request.headers.get("origin") or request.headers.get("referer")
+    origin = connection.headers.get("origin") or connection.headers.get("referer")
 
     is_allowed = any(origin and origin.startswith(net) for net in ALLOWED_ORIGIN)
 
@@ -128,9 +136,9 @@ async def get_chat_entity(
             detail="Need token or API key"
         )
 
-    anon_id = request.cookies.get(ANON_COOKIE_NAME)
-    if not anon_id:
-        anon_id = str(uuid.uuid4())
+    anon_id = connection.cookies.get(ANON_COOKIE_NAME)
+    if response and not anon_id:
+        anon_id = uuid.uuid4().__str__()
         response.set_cookie(
             key=ANON_COOKIE_NAME,
             value=anon_id,
