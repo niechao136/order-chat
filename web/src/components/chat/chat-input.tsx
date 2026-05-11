@@ -146,7 +146,7 @@ export function ChatInput({
           rows={1}
           placeholder="发送消息..."
           className="w-full min-h-15 max-h-50 border-0 focus-visible:ring-0 resize-none pt-4 pb-12 px-4 text-base bg-transparent"
-          value={input}
+          value={input + (tempResult ? ` ${tempResult}` : '')}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={async (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
