@@ -1,5 +1,7 @@
-import secrets
+import base64
+import hashlib
 import os
+import secrets
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from passlib.context import CryptContext
@@ -23,12 +25,17 @@ def verify_api_key(plain_key: str, key_hash: str) -> bool:
     except Exception:
         return False
 
-# 从环境变量获取加密密钥（需提前生成并妥善保管）
-FERNET_KEY = os.getenv("FERNET_KEY")
-if not FERNET_KEY:
-    raise RuntimeError("FERNET_KEY 环境变量未设置")
 
-cipher = Fernet(FERNET_KEY.encode())
+def get_fernet_cipher():
+    raw_key = os.getenv("API_KEY_SECRET")
+    if not raw_key:
+        raise RuntimeError("API_KEY_SECRET 环境变量未设置")
+
+    key_hash = hashlib.sha256(raw_key.encode()).digest()
+    fernet_key = base64.urlsafe_b64encode(key_hash)
+    return Fernet(fernet_key)
+
+cipher = get_fernet_cipher()
 
 def encrypt_api_key(plain_key: str) -> bytes:
     """加密明文密钥，返回二进制数据"""
@@ -37,7 +44,3 @@ def encrypt_api_key(plain_key: str) -> bytes:
 def decrypt_api_key(encrypted: bytes) -> str:
     """解密二进制数据，返回明文密钥"""
     return cipher.decrypt(encrypted).decode()
-
-
-if __name__ == "__main__":
-    print(Fernet.generate_key().decode())
