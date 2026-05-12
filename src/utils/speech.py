@@ -58,7 +58,12 @@ def load_audio(content: bytes):
 
         # 3. 将采样数据转换为 float32 数组
         # pydub 默认是 int16，所以除以 32768.0 进行归一化
-        samples = np.array(audio.get_array_of_samples()).astype(np.float32) / 32768.0
+        samples = np.array(audio.get_array_of_samples()).astype(np.float32)
+
+        if audio.sample_width == 2:  # 16-bit
+            samples /= 32768.0
+        elif audio.sample_width == 4:  # 32-bit
+            samples /= 2147483648.0
 
         return samples
 
