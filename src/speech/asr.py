@@ -41,6 +41,8 @@ def init_online() -> sherpa_onnx.OnlineRecognizer:
         encoder=os.path.join(ONLINE_DIR, "encoder.int8.onnx"),
         tokens=os.path.join(ONLINE_DIR, "tokens.txt"),
         enable_endpoint_detection=True,
+        rule1_min_trailing_silence=1.2,
+        rule2_min_trailing_silence=0.8,
         num_threads=1
     )
     _online = online

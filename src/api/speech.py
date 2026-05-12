@@ -184,7 +184,7 @@ async def speech_to_text(
         raise HTTPException(status_code=500, detail=f"识别失败: {str(e)}")
 
 
-@speech_router.websocket("/asr-stream")
+@speech_router.websocket(path="/asr-stream")
 async def speech_to_text_stream(
         websocket: WebSocket,
         chat_entity: str = Depends(get_chat_websocket),
@@ -195,6 +195,8 @@ async def speech_to_text_stream(
     stream = recognizer.create_stream()
 
     last_text = ""
+    audio_buffer = []
+    chunk_size = 1280
 
     try:
         while True:
@@ -210,18 +212,20 @@ async def speech_to_text_stream(
                 continue
 
             # 2. 转换为 float32 归一化
-            samples = np.frombuffer(data, dtype=np.int16).copy().astype(np.float32) / 32768.0
+            samples = cast(np.ndarray, np.frombuffer(data, dtype=np.int16).copy().astype(np.float32) / 32768.0)
+            audio_buffer.extend(samples.tolist())
 
-            # 3. 喂入识别器
-            stream.accept_waveform(16000, samples)
+            # 只有当缓冲区足够长时（比如 0.1s 的数据），才喂给模型
+            while len(audio_buffer) >= chunk_size:
+                chunk = np.array(audio_buffer[:chunk_size], dtype=np.float32)
+                audio_buffer = audio_buffer[chunk_size:]
 
-            # 4. 解码循环
-            while recognizer.is_ready(stream):
-                recognizer.decode_stream(stream)
+                stream.accept_waveform(16000, chunk)
+                while recognizer.is_ready(stream):
+                    recognizer.decode_stream(stream)
 
             # 5. 获取结果
-            result = stream.result
-            current_text = result.text.strip()
+            current_text = recognizer.get_result(stream)
 
             # 6. 推送逻辑
             if current_text:
@@ -238,14 +242,13 @@ async def speech_to_text_stream(
 
                 # 7. 如果检测到一句话结束
                 if is_endpoint:
-                    # 告知模型这一段结束了，有助于提升最后一两个词的准确度
-                    recognizer.decode_stream(stream)
-                    # 重置流，准备接收下一句话
-                    recognizer.reset(stream)
+                    audio_buffer.clear()
+                    del stream
+                    stream = recognizer.create_stream()
                     last_text = ""
 
     except WebSocketDisconnect:
-        pass
+        print(f"Client {chat_entity} disconnected")
     except Exception:
         import traceback
         traceback.print_exc()

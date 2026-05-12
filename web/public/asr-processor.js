@@ -1,20 +1,29 @@
 // public/asr-processor.js
 class AsrProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this._keepAlive = true; // 显式标记
+    this.chunkSize = 1280; // 统一使用 320
+    this.buffer = new Int16Array(this.chunkSize);
+    this.offset = 0;
+  }
+
   process(inputs, outputs, parameters) {
-    const input = inputs[0];
-    if (input.length > 0) {
-      const float32Data = input[0]; // 获取左声道数据
+    const input = inputs[0][0];
+    if (!input) return true;
 
-      // 将 Float32 转换为 PCM 16bit
-      const pcmData = new Int16Array(float32Data.length);
-      for (let i = 0; i < float32Data.length; i++) {
-        const s = Math.max(-1, Math.min(1, float32Data[i]));
-        pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    for (let i = 0; i < input.length; i++) {
+      const s = Math.max(-1, Math.min(1, input[i]));
+      this.buffer[this.offset++] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+
+      // 缓冲区满了才发送
+      if (this.offset >= this.chunkSize) {
+        this.port.postMessage(this.buffer.buffer, [this.buffer.buffer]);
+        this.buffer = new Int16Array(this.chunkSize); // 重新分配新内存
+        this.offset = 0;
       }
-
-      // 发送回主线程
-      this.port.postMessage(pcmData.buffer, [pcmData.buffer]);
     }
+
     return true;
   }
 }
