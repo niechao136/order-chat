@@ -9,7 +9,7 @@ from src.schemas.chat import AgentConfig, ChatRequest
 
 
 AGENT_CONFIG: List[AgentConfig] = [
-    AgentConfig(name="find", lang="zh-TW", dataset="WayFind"),
+    AgentConfig(name="find", lang="zh-TW", dataset="WayFinding"),
     AgentConfig(name="order", lang="zh-TW", dataset="Order"),
 ]
 

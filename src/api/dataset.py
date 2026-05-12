@@ -308,6 +308,7 @@ async def upload_points(
 
     texts = [item.content for item in body]
     vectors = await get_embeddings_async_batch(texts=texts)
+    print(f"texts 长度：{len(texts)}，vectors 长度：{len(vectors)}")
 
     points = []
     new_ids = []
