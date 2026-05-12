@@ -1,8 +1,7 @@
 'use client';
 
-import { MicIcon, SendIcon } from 'lucide-react';
-import { AnimatePresence, motion, useTransform } from 'framer-motion';
-import { useState } from 'react';
+import { SendIcon } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useRouter } from 'next/navigation';
@@ -11,11 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 import { ChatConfig } from '@/components/chat/chat-config';
+import { VoiceButton } from '@/components/chat/voice-button';
 
-import { cn } from '@/lib/utils';
 import { useChatAction } from '@/hooks/use-chat';
-import { useSpeechStream } from '@/hooks/use-speech';
-import { useVoiceActivity } from '@/hooks/use-media';
+import { useSpeechAction, useSpeechStream } from '@/hooks/use-speech';
 import { useChatStore } from '@/stores/chat';
 import { AgentConfig } from '@/types/chat';
 
@@ -48,10 +46,12 @@ export function ChatInput({
   const [lang, setLang] = useState(config.lang);
   const [dataset, setDataset] = useState(config.dataset);
   const [isRecording, setIsRecording] = useState(false);
+  const [isRecord, setIsRecord] = useState(false);
   const [tempResult, setTempResult] = useState('');
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   const { sendMsg } = useChatAction(agent);
-  const volumeValue = useVoiceActivity(isRecording);
   const { startStreaming, stopStreaming } = useSpeechStream((text, isFinal) => {
     // 实时更新输入框内容
     // 这里逻辑可以优化：如果是中间结果，替换末尾；如果是最终结果，确认追加
@@ -62,10 +62,7 @@ export function ChatInput({
       setTempResult('');
     }
   });
-
-  const scale = useTransform(volumeValue, [0, 1], [1, 2.5]);
-  const opacity = useTransform(volumeValue, [0, 1], [0.4, 0.8]);
-  const iconScale = useTransform(volumeValue, [0, 1], [1, 1.4]);
+  const { recognize } = useSpeechAction();
 
   const setConfig = (lang: string, dataset: string) => {
     setLang(lang);
@@ -137,6 +134,60 @@ export function ChatInput({
     }
   };
 
+  const handleRecognize = async (blob: Blob) => {
+    const toastId = toast.loading('正在识别语音...');
+
+    const formData = new FormData();
+    formData.append('file', blob, 'record.webm');
+
+    recognize.mutate(formData, {
+      onSuccess: (res) => {
+        setInput(prev => {
+          return prev && res.text ? `${prev} ${res.text}` : (res.text ?? '');
+        });
+        toast.success('识别成功', { id: toastId });
+      },
+      onError: (err: Error) => {
+        toast.error(err.message || '语音识别失败', { id: toastId });
+      },
+    });
+  };
+
+  const handleMic = async () => {
+    if (!isRecord) {
+      // --- 开始录音逻辑 ---
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // 注意：某些浏览器 webm 兼容性更好，SenseVoice 接收 webm 也没问题
+        const recorder = new MediaRecorder(stream);
+        recorderRef.current = recorder;
+        chunksRef.current = [];
+
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+
+        recorder.onstop = async () => {
+          const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          await handleRecognize(audioBlob);
+        };
+
+        recorder.start();
+        setIsRecord(true);
+        toast.success('正在聆听...');
+      } catch (err) {
+        console.log(err);
+        toast.error('无法访问麦克风');
+      }
+    } else {
+      // --- 停止录音逻辑 ---
+      recorderRef.current?.stop();
+      setIsRecord(false);
+      // 停止流中的所有轨道以释放硬件
+      recorderRef.current?.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
   return (
     <div className="max-w-3xl w-full sticky bottom-8 px-4 md:px-0">
       <div className="relative bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-slate-200 focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/5 transition-all duration-300">
@@ -159,34 +210,17 @@ export function ChatInput({
         {/* 底部工具栏 */}
         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
           <div className="flex items-center gap-1">
-            {/* 语音输入按钮 */}
-            <div className="relative flex items-center justify-center w-10 h-10">
-              <AnimatePresence>
-                {isRecording && (
-                  <motion.div
-                    style={{ scale, opacity }} // 直接绑定 MotionValue
-                    className="absolute inset-0 rounded-full bg-red-400/30 z-0"
-                  />
-                )}
-              </AnimatePresence>
+            {/* 语音输入按钮，流式 */}
+            <VoiceButton
+              onClick={() => handleMicClick()}
+              isRecording={isRecording}
+            />
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  'relative z-10 h-9 w-9 rounded-xl transition-all duration-300',
-                  isRecording
-                    ? 'bg-red-500 text-white shadow-lg shadow-red-200 hover:bg-red-600'
-                    : 'text-slate-400 hover:bg-slate-100'
-                )}
-                onClick={() => handleMicClick()}
-              >
-                <motion.div style={{ scale: isRecording ? iconScale : 1 }}>
-                  <MicIcon className="h-5 w-5"/>
-                </motion.div>
-              </Button>
-            </div>
+            {/* 语音输入按钮，非流式 */}
+            <VoiceButton
+              onClick={() => handleMic()}
+              isRecording={isRecord}
+            />
 
             {/* 配置按钮 */}
             <ChatConfig
