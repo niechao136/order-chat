@@ -2,7 +2,7 @@ from enum import Enum
 from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
 
 class AgentState(BaseModel):
@@ -14,6 +14,7 @@ class ProductItem(BaseModel):
     name: str = Field(description="商品名称")
     price: float = Field(description="商品价格")
     descr: str = Field(description="商品描述")
+    stock: Optional[int] = Field(description="商品库存")
     store: str = Field(description="门店名称")
     child_space_id: str = Field(description="门店ID")
     space_id: str = Field(description="分区ID")
@@ -55,6 +56,7 @@ class OutputProduct(BaseModel):
     name: str = Field(description="商品名称")
     price: float = Field(description="商品价格")
     descr: str = Field(description="商品描述")
+    stock: Optional[int] = Field(description="商品库存")
     ai_analysis: str = Field(description="商品AI分析")
     index: ProductIndex = Field(description="商品序号，从A开始，严禁重复")
 
